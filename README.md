@@ -15,12 +15,15 @@ Originaldatei des Spiels wird verändert.
 
 1. Das Spiel schließen.
 2. `SamMaxDeutsch.exe` starten.
-3. Den Remaster-Ordner und die alte deutsche Version auswählen (installierter Ordner oder gemountete Disc).
+3. Die Steam-Fassung wird automatisch gefunden. Sonst den Remaster-Ordner und die alte deutsche Version anklicken und auswählen (installierter Ordner oder gemountete Disc).
 4. Episoden wählen und **Deutsche Stimmen installieren** klicken.
 5. Im Spiel die Sprache auf Deutsch stellen.
 
 Alle fünf Episoden dauern auf dem Testrechner etwa 10 Minuten und belegen rund 720 MB.
-**Wieder entfernen** löscht alles, was das Werkzeug installiert hat.
+**Fall zu den Akten legen** löscht nach einer Rückfrage alles, was das Werkzeug installiert hat.
+
+Das Fenster braucht die [WebView2-Runtime](https://developer.microsoft.com/microsoft-edge/webview2/) von Microsoft,
+die auf aktuellen Windows-Systemen meist schon vorhanden ist. Die Reiter für Season 1 und 3 sind noch gesperrt.
 
 Ohne Fenster:
 
@@ -63,7 +66,7 @@ Repository liegen:
 - `libspeex-1.dll` aus dem MSYS2-Paket `mingw-w64-x86_64-speex`
 - `7z.exe` und `7z.dll` aus einer 7-Zip-Installation
 
-Die Lizenztexte liegen in `bin/`. Danach:
+Die Lizenztexte liegen in `licenses/`. Danach:
 
 ```bash
 powershell -ExecutionPolicy Bypass -File build.ps1
@@ -77,14 +80,16 @@ Die alten und neuen Spieldaten sind urheberrechtlich geschützt. Archive, Sprach
 und die fertige Exe bleiben außerhalb; `.gitignore` schließt sie aus.
 
 **`src/keys.py` enthält die Entschlüsselungs-Schlüssel der Spieldateien.** Vor einer Veröffentlichung des
-Repositorys oder der Exe sollte geklärt werden, ob das rechtlich in Ordnung ist.
+Repositorys oder der Exe sollte geklärt werden, ob das rechtlich in Ordnung ist. Das gilt auch für
+`src/ui/hintergrund.jpg`, das auf Original-Artwork von Sam & Max beruht.
 
 ## Aufbau
 
 | Pfad | Inhalt |
 |---|---|
 | `src/launcher.py` | Einstieg der Exe: Fenster oder Umwandlung |
-| `src/gui.py` | Fenster |
+| `src/gui.py` | Backend des Fensters: Steam-Erkennung, Ordnerauswahl, Umwandlung starten und verfolgen |
+| `src/ui/` | Oberfläche im Fallakte-Stil: HTML, CSS, JavaScript, Schriften, Hintergrund |
 | `src/sammax_de.py` | Ablauf: Quellen finden, Zeilen zuordnen, umwandeln, installieren |
 | `src/old_archive.py`, `src/ttarch4.py` | Archive von 2009 lesen |
 | `src/ectt.py`, `src/nctt.py` | Archive des Remasters lesen |
@@ -97,6 +102,7 @@ Repositorys oder der Exe sollte geklärt werden, ob das rechtlich in Ordnung ist
 ## Danksagung
 
 Die Schlüssel und Teile des Formatwissens stammen aus den Open-Source-[TTG Tools](https://github.com/HeitorSpectre/TTG-Tools).
-Das Werkzeug nutzt [Speex](https://speex.org) und [7-Zip](https://www.7-zip.org).
+Das Werkzeug nutzt [Speex](https://speex.org), [7-Zip](https://www.7-zip.org) und
+[pywebview](https://pywebview.flowrl.com), dazu die Schriften Bangers (OFL) und Special Elite (Apache 2.0).
 
 Noch ist keine Lizenz für diesen Code festgelegt.

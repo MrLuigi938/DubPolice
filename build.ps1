@@ -15,4 +15,5 @@ if (-not (Test-Path -LiteralPath '.venv\Scripts\python.exe')) { python -m venv .
     --add-binary "$PSScriptRoot\bin\libspeex-1.dll;bin" `
     --add-binary "$PSScriptRoot\bin\7z.exe;bin" `
     --add-binary "$PSScriptRoot\bin\7z.dll;bin" `
+    --add-data "$PSScriptRoot\src\ui;ui" `
     src\launcher.py

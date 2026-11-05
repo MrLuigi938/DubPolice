@@ -26,6 +26,8 @@ from difflib import SequenceMatcher
 HERE = getattr(sys, "_MEIPASS", os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, HERE)
 NO_WINDOW = subprocess.CREATE_NO_WINDOW if os.name == "nt" else 0
+# Bundled inside the exe; next to src/ when run from the source code.
+BIN = os.path.join(HERE, "bin") if hasattr(sys, "_MEIPASS") else os.path.join(os.path.dirname(HERE), "bin")
 
 from anm_patch import patch  # noqa: E402
 from build_mod import crc64, make_archive  # noqa: E402
@@ -42,7 +44,7 @@ from variants import encrypt  # noqa: E402
 from vox2wav import Speex, parse_vox  # noqa: E402
 
 EPISODES = ("201", "202", "203", "204", "205")
-SPEEX_DLL = os.path.join(HERE, "bin", "libspeex-1.dll")
+SPEEX_DLL = os.path.join(BIN, "libspeex-1.dll")
 MANIFEST = "SamMax_GermanDub.json"
 LEGACY_FILES = ("SM2_pc_GermanVoiceTest_uncompressed.ttarch2", "_resdesc_50_GermanVoiceTest.lua")
 STEP = 0.002
@@ -67,7 +69,7 @@ def check_game(game):
 
 def find_7zip():
     found = shutil.which("7z") or shutil.which("7za")
-    bundled = os.path.join(HERE, "bin", "7z.exe")
+    bundled = os.path.join(BIN, "7z.exe")
     for path in (bundled, found, r"C:\Program Files\7-Zip\7z.exe", r"C:\Program Files (x86)\7-Zip\7z.exe"):
         if path and os.path.isfile(path):
             return path
@@ -239,7 +241,7 @@ def match_lines(e, paths, remaster, arch_dir, work):
         w = csv.writer(f, delimiter=";")
         w.writerow(["remaster_id", "old_id", "match", "speaker", "english", "old_german"])
         w.writerows(rows)
-    say(f"Episode {e}: {len(new_len)} Sprachzeilen, {len(pairs)} zugeordnet ({counts}).")
+    say(f"Episode {e}: {len(new_len)} Sprachzeilen, {len(pairs)} zugeordnet.")
     return pairs, voice_de
 
 
@@ -540,11 +542,20 @@ def delete_from_archives(game, names):
 
 def remove_files(game):
     """Remove everything this tool installed."""
-    removed = delete_from_archives(game, list(LEGACY_FILES) + read_manifest(game).get("files", []))
+    names = list(LEGACY_FILES) + read_manifest(game).get("files", [])
+    removed = delete_from_archives(game, names)
+    delete_from_archives(game, [n + ".tmp" for n in names])
     path = os.path.join(game, MANIFEST)
     if os.path.isfile(path):
         os.remove(path)
     return removed
+
+
+def write_atomic(path, data):
+    temporary = path + ".tmp"
+    with open(temporary, "wb") as f:
+        f.write(data)
+    os.replace(temporary, path)
 
 
 def episode_files(e):
@@ -590,20 +601,18 @@ def main():
             say(f"=== Episode {e} ===")
             archive, stats[e] = build_episode(e, sources[e], args.game, work, pool)
             built[e] = archive
+        say("Schreibe die Archive ins Spiel ...")
         # Only touch the game once every episode has been built; other episodes stay installed.
         manifest = read_manifest(args.game)
         delete_from_archives(args.game, LEGACY_FILES)
         for e, archive in built.items():
             archive_name, desc_name = episode_files(e)
-            delete_from_archives(args.game, [archive_name, desc_name])
-            with open(os.path.join(arch, archive_name), "wb") as f:
-                f.write(archive)
-            with open(os.path.join(arch, desc_name), "wb") as f:
-                f.write(descriptor(e, archive_name))
+            # Finished files appear in one step, so stopping here never leaves a half-written archive.
+            write_atomic(os.path.join(arch, archive_name), archive)
+            write_atomic(os.path.join(arch, desc_name), descriptor(e, archive_name))
             manifest["files"] = sorted(set(manifest.get("files", [])) | {archive_name, desc_name})
             manifest.setdefault("episodes", {})[e] = stats[e]
-        with open(os.path.join(args.game, MANIFEST), "w", encoding="utf-8") as f:
-            json.dump(manifest, f, indent=1)
+            write_atomic(os.path.join(args.game, MANIFEST), json.dumps(manifest, indent=1).encode("utf-8"))
         say("FERTIG. Installiert: " + ", ".join(f"Episode {e} ({s['lines']} Zeilen)" for e, s in stats.items()))
     finally:
         if temporary:

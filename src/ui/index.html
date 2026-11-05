@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<title>Sam &amp; Max: Deutsche Synchronisation</title>
+<link rel="stylesheet" href="fallakte.css">
+</head>
+<body>
+<img class="space" src="hintergrund.jpg" alt="" aria-hidden="true">
+
+<main class="dossier">
+  <div class="tabs" role="tablist" aria-label="Season" id="tabs"></div>
+
+  <section class="paper" role="tabpanel" id="panel">
+    <div class="left">
+      <h1 id="title"></h1>
+      <div class="photo"><img id="photo" src="hintergrund.jpg" alt="Beweisfoto: die Erde mit Hasenohren"></div>
+      <p class="evidence" id="evidence" aria-live="polite"></p>
+    </div>
+
+    <div class="right">
+      <header class="case">
+        <span id="caseName"></span>
+        <span id="caseNo"></span>
+      </header>
+      <div class="stamp" id="stamp" aria-hidden="true"></div>
+
+      <div id="openView" class="view">
+        <button type="button" class="path" id="gameRow">
+          <span class="caption">Tatort (Remaster-Ordner)</span>
+          <span class="value" id="gameValue"></span>
+        </button>
+        <button type="button" class="path" id="sourceRow">
+          <span class="caption">Zeugen (alte deutsche Version)</span>
+          <span class="value" id="sourceValue"></span>
+        </button>
+        <fieldset class="episodes" id="episodes">
+          <legend>Episoden</legend>
+          <div id="episodeList"></div>
+        </fieldset>
+
+        <div class="actions" id="actions">
+          <button type="button" class="install" id="install">Deutsche Stimmen installieren</button>
+          <button type="button" class="linkish" id="remove">Fall zu den Akten legen<small>Deutsche Stimmen entfernen</small></button>
+        </div>
+
+        <div class="running" id="running" hidden>
+          <div class="bar" role="progressbar" aria-label="Fortschritt" aria-valuemin="0" aria-valuemax="100" id="bar"><div id="barFill"></div></div>
+          <div class="runline">
+            <span id="runText"></span>
+            <button type="button" class="linkish" id="cancel">Abbrechen</button>
+          </div>
+        </div>
+      </div>
+
+      <div id="lockedView" class="view" hidden>
+        <p class="locked-text" id="lockedText"></p>
+        <div class="episodes-locked">
+          <div class="label">Episoden</div>
+          <div id="lockedList"></div>
+        </div>
+        <div class="actions">
+          <button type="button" class="install" disabled>Noch nicht verfügbar</button>
+        </div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<script src="fallakte.js"></script>
+</body>
+</html>

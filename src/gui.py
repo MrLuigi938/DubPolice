@@ -1,163 +1,199 @@
-"""Simple window for the Sam & Max German dub tool."""
+"""The window of the tool: a small web page (ui/) shown through WebView2, with this class as its backend."""
+import ctypes
+import json
 import os
 import queue
+import re
+import shutil
 import subprocess
 import sys
 import tempfile
 import threading
 import time
-import tkinter as tk
-from tkinter import filedialog, messagebox, ttk
 
-HERE = os.path.dirname(os.path.abspath(__file__))
+import webview
+
+HERE = getattr(sys, "_MEIPASS", os.path.dirname(os.path.abspath(__file__)))
 FROZEN = getattr(sys, "frozen", False)
-APP_DIR = os.path.dirname(sys.executable) if FROZEN else HERE
-EPISODES = ("201", "202", "203", "204", "205")
-DEFAULT_GAMES = (
-    r"C:\Program Files (x86)\Steam\steamapps\common\Sam & Max Beyond Time and Space",
-    r"Z:\SteamLibrary\steamapps\common\Sam & Max Beyond Time and Space",
-)
+APP_DIR = os.path.dirname(sys.executable) if FROZEN else os.path.dirname(os.path.abspath(__file__))
+GAME_FOLDER = "Sam & Max Beyond Time and Space"
+MANIFEST = "SamMax_GermanDub.json"
+NO_WINDOW = subprocess.CREATE_NO_WINDOW if os.name == "nt" else 0
+WEBVIEW2_URL = "https://developer.microsoft.com/microsoft-edge/webview2/"
 
 
-class App(tk.Tk):
+def steam_libraries():
+    """Every Steam library folder on this PC, from Steam's own configuration."""
+    try:
+        import winreg
+
+        with winreg.OpenKey(winreg.HKEY_CURRENT_USER, r"Software\Valve\Steam") as key:
+            steam = winreg.QueryValueEx(key, "SteamPath")[0]
+    except OSError:
+        return []
+    folders = [os.path.normpath(steam)]
+    try:
+        with open(os.path.join(steam, "steamapps", "libraryfolders.vdf"), encoding="utf-8", errors="replace") as f:
+            for path in re.findall(r'"path"\s+"([^"]+)"', f.read()):
+                folders.append(os.path.normpath(path.replace("\\\\", "\\")))
+    except OSError:
+        pass
+    return folders
+
+
+def is_game(path):
+    return bool(path) and os.path.isfile(os.path.join(path, "SamMax200.exe")) and os.path.isdir(os.path.join(path, "Archives"))
+
+
+def find_game():
+    for library in steam_libraries():
+        candidate = os.path.join(library, "steamapps", "common", GAME_FOLDER)
+        if is_game(candidate):
+            return candidate
+    return ""
+
+
+def installed_episodes(game):
+    try:
+        with open(os.path.join(game, MANIFEST), encoding="utf-8") as f:
+            return sorted(json.load(f).get("episodes", {}))
+    except (OSError, ValueError):
+        return []
+
+
+class Backend:
+    """Methods the page calls. Names starting with an underscore stay hidden from it."""
+
     def __init__(self):
-        super().__init__()
-        self.title("Sam & Max – Deutsche Synchronisation")
-        self.geometry("760x540")
-        self.minsize(640, 460)
-        self.lines = queue.Queue()
-        self.process = None
+        self._window = None
+        self._process = None
+        self._messages = queue.Queue()
+        self._progress = None
+        self._finished = None
+        self._cancelled = False
+        self._recent = []
+        self._work = None
 
-        pad = {"padx": 8, "pady": 4}
-        frame = ttk.Frame(self)
-        frame.pack(fill="x", **pad)
-        frame.columnconfigure(1, weight=1)
+    def _set_window(self, window):
+        self._window = window
 
-        self.game = tk.StringVar(value=next((g for g in DEFAULT_GAMES if os.path.isdir(g)), ""))
+    def initial_state(self):
         local = os.path.join(APP_DIR, "Quelldaten")
-        self.source = tk.StringVar(value=local if os.path.isdir(local) else "")
-        ttk.Label(frame, text="Remaster-Ordner:").grid(row=0, column=0, sticky="w")
-        ttk.Entry(frame, textvariable=self.game).grid(row=0, column=1, sticky="ew", padx=4)
-        ttk.Button(frame, text="Auswählen …", command=lambda: self.pick(self.game)).grid(row=0, column=2)
-        ttk.Label(frame, text="Alte deutsche Version:").grid(row=1, column=0, sticky="w", pady=4)
-        ttk.Entry(frame, textvariable=self.source).grid(row=1, column=1, sticky="ew", padx=4)
-        ttk.Button(frame, text="Auswählen …", command=lambda: self.pick(self.source)).grid(row=1, column=2)
-        ttk.Label(frame, text="Installierter Ordner oder eingelegte/gemountete Disc von Season 2.").grid(row=2, column=1, sticky="w", padx=4)
+        return {"game": find_game(), "source": local if os.path.isdir(local) else ""}
 
-        boxes = ttk.Frame(self)
-        boxes.pack(fill="x", **pad)
-        ttk.Label(boxes, text="Episoden:").pack(side="left")
-        self.chosen = {}
-        for e in EPISODES:
-            self.chosen[e] = tk.BooleanVar(value=True)
-            ttk.Checkbutton(boxes, text=e, variable=self.chosen[e]).pack(side="left", padx=4)
+    def check(self, game, source):
+        ok = is_game(game)
+        return {"game_ok": ok, "source_ok": bool(source) and os.path.isdir(source), "installed": installed_episodes(game) if ok else []}
 
-        buttons = ttk.Frame(self)
-        buttons.pack(fill="x", **pad)
-        self.install_button = ttk.Button(buttons, text="Deutsche Stimmen installieren", command=self.install)
-        self.install_button.pack(side="left")
-        self.remove_button = ttk.Button(buttons, text="Wieder entfernen", command=self.uninstall)
-        self.remove_button.pack(side="left", padx=8)
+    def pick_folder(self, current):
+        start = current if current and os.path.isdir(current) else ""
+        result = self._window.create_file_dialog(webview.FileDialog.FOLDER, directory=start)
+        return os.path.normpath(result[0]) if result else ""
 
-        self.status = tk.StringVar(value="Bereit.")
-        ttk.Label(self, textvariable=self.status).pack(fill="x", **pad)
-        self.bar = ttk.Progressbar(self, maximum=1.0)
-        self.bar.pack(fill="x", **pad)
-        self.log = tk.Text(self, height=14, wrap="word", state="disabled")
-        self.log.pack(fill="both", expand=True, **pad)
-        self.after(100, self.pump)
+    def install(self, game, source, episodes):
+        if not episodes:
+            return "Bitte mindestens eine Episode auswählen."
+        return self._start(["--game", game, "--source", source, "--episodes", *episodes])
 
-    def pick(self, variable):
-        folder = filedialog.askdirectory(initialdir=variable.get() or None)
-        if folder:
-            variable.set(os.path.normpath(folder))
+    def uninstall(self, game):
+        question = "Deutsche Stimmen wieder entfernen? Das Spiel spricht danach wieder Englisch."
+        if not self._window.create_confirmation_dialog("Fall zu den Akten legen", question):
+            return False
+        return self._start(["--game", game, "--uninstall"]) is None
 
-    def run(self, args):
-        self.install_button.state(["disabled"])
-        self.remove_button.state(["disabled"])
-        self.write("Starte …")
-        flags = subprocess.CREATE_NO_WINDOW if os.name == "nt" else 0
-        handle, self.log_path = tempfile.mkstemp(prefix="SamMaxDE_", suffix=".log")
-        os.close(handle)
+    def cancel(self):
+        if self._process and self._process.poll() is None:
+            self._cancelled = True
+            # Stops the worker processes too. Files reach the game complete or not at all.
+            subprocess.run(["taskkill", "/T", "/F", "/PID", str(self._process.pid)], capture_output=True, creationflags=NO_WINDOW)
+
+    def poll(self):
+        lines = []
+        while True:
+            try:
+                lines.append(self._messages.get_nowait())
+            except queue.Empty:
+                break
+        finished = self._finished
+        return {
+            "lines": lines,
+            "progress": self._progress,
+            "finished": finished,
+            "cancelled": self._cancelled,
+            "tail": "\n".join(self._recent[-3:]) if finished else "",
+        }
+
+    def _start(self, args):
+        if self._process and self._process.poll() is None:
+            return "Es läuft bereits eine Umwandlung."
+        self._progress = None
+        self._finished = None
+        self._cancelled = False
+        self._recent = []
+        self._work = tempfile.mkdtemp(prefix="SamMaxDE_")
+        log_path = os.path.join(self._work, "log.txt")
+        open(log_path, "w").close()
         command = [sys.executable] if FROZEN else [sys.executable, os.path.join(HERE, "launcher.py")]
-        self.process = subprocess.Popen([*command, "--engine", *args, "--log", self.log_path], creationflags=flags)
-        threading.Thread(target=self.reader, daemon=True).start()
+        extra = ["--work", self._work] if "--uninstall" not in args else []
+        self._process = subprocess.Popen([*command, "--engine", *args, *extra, "--log", log_path], creationflags=NO_WINDOW)
+        threading.Thread(target=self._follow, args=(log_path,), daemon=True).start()
+        return None
 
-    def reader(self):
-        """Follow the log file until the conversion process has ended."""
-        newline = chr(10)
-        with open(self.log_path, encoding="utf-8", errors="replace") as log:
+    def _follow(self, log_path):
+        """Read the log until the conversion process has ended, then clean up its work folder."""
+        with open(log_path, encoding="utf-8", errors="replace") as log:
             partial = ""
             while True:
                 chunk = log.read()
                 if chunk:
                     partial += chunk
-                    *complete, partial = partial.split(newline)
+                    *complete, partial = partial.split("\n")
                     for line in complete:
-                        self.lines.put(line.rstrip())
-                elif self.process.poll() is not None:
+                        self._handle(line.rstrip())
+                elif self._process.poll() is not None:
                     break
                 else:
                     time.sleep(0.2)
         if partial.strip():
-            self.lines.put(partial.rstrip())
-        code = self.process.wait()
-        try:
-            os.remove(self.log_path)
-        except OSError:
-            pass
-        self.lines.put(("EXIT", code))
+            self._handle(partial.rstrip())
+        code = self._process.wait()
+        shutil.rmtree(self._work, ignore_errors=True)
+        self._finished = code
 
-    def pump(self):
-        try:
-            while True:
-                item = self.lines.get_nowait()
-                if isinstance(item, tuple):
-                    self.finished(item[1])
-                elif item.startswith("PROGRESS "):
-                    step, done, total = item[9:].rsplit(" ", 2)
-                    total = max(int(total), 1)
-                    self.bar["value"] = int(done) / total
-                    self.status.set(f"{step}: {done} von {total}")
-                else:
-                    self.write(item)
-        except queue.Empty:
-            pass
-        self.after(100, self.pump)
+    def _handle(self, line):
+        if line.startswith("PROGRESS "):
+            step, done, total = line[9:].rsplit(" ", 2)
+            self._progress = {"step": step, "done": int(done), "total": int(total)}
+        elif line:
+            self._recent.append(line)
+            self._messages.put(line)
 
-    def write(self, text):
-        self.log.configure(state="normal")
-        self.log.insert("end", text + "\n")
-        self.log.see("end")
-        self.log.configure(state="disabled")
 
-    def finished(self, code):
-        self.install_button.state(["!disabled"])
-        self.remove_button.state(["!disabled"])
-        self.bar["value"] = 1.0 if code == 0 else 0.0
-        self.status.set("Fertig." if code == 0 else "Abgebrochen, siehe Meldungen.")
-        if code == 0:
-            messagebox.showinfo("Sam & Max", "Fertig.")
-        else:
-            messagebox.showerror("Sam & Max", "Das hat nicht geklappt. Die Meldungen stehen im Fenster.")
-
-    def install(self):
-        if not self.game.get() or not self.source.get():
-            messagebox.showwarning("Sam & Max", "Bitte beide Ordner auswählen.")
-            return
-        episodes = [e for e in EPISODES if self.chosen[e].get()]
-        if not episodes:
-            messagebox.showwarning("Sam & Max", "Bitte mindestens eine Episode auswählen.")
-            return
-        self.run(["--game", self.game.get(), "--source", self.source.get(), "--episodes", *episodes])
-
-    def uninstall(self):
-        if not self.game.get():
-            messagebox.showwarning("Sam & Max", "Bitte den Remaster-Ordner auswählen.")
-            return
-        if messagebox.askyesno("Sam & Max", "Deutsche Stimmen wieder entfernen?"):
-            self.run(["--game", self.game.get(), "--uninstall"])
+def run():
+    backend = Backend()
+    window = webview.create_window(
+        "Sam & Max: Deutsche Synchronisation",
+        url=os.path.join(HERE, "ui", "index.html"),
+        js_api=backend,
+        width=976,
+        height=639,
+        resizable=False,
+        background_color="#05060b",
+    )
+    backend._set_window(window)
+    try:
+        webview.start(gui="edgechromium")
+    except Exception as err:  # pywebview reports a missing WebView2 runtime in several ways
+        ctypes.windll.user32.MessageBoxW(
+            None,
+            f"Das Fenster konnte nicht geöffnet werden. Vermutlich fehlt die WebView2-Runtime von Microsoft:\n"
+            f"{WEBVIEW2_URL}\n\nFehler: {err}",
+            "Sam & Max: Deutsche Synchronisation",
+            0x10,
+        )
+        sys.exit(1)
+    backend.cancel()
 
 
 if __name__ == "__main__":
-    App().mainloop()
+    run()
