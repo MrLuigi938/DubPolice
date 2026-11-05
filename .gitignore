@@ -1,0 +1,30 @@
+# Spieldaten sind urheberrechtlich geschützt und bleiben draußen
+Quelldaten/
+*.ttarch
+*.ttarch2
+*.vox
+*.aud
+*.wav
+*.anm
+*.chore
+*.landb
+*.langdb
+*.iso
+*_lines.csv
+*_mapping.csv
+
+# Fremdprogramme, siehe README
+bin/*.dll
+bin/*.exe
+
+# Build
+build/
+dist/
+*.spec
+*.exe
+__pycache__/
+*.pyc
+.venv/
+
+# Von der App übernommene Arbeitsdateien
+samax-mod/
