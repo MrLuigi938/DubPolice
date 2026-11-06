@@ -1,4 +1,4 @@
-"""Entry point of SamMaxDeutsch.exe: opens the window, or does the conversion when called with --engine."""
+"""Entry point of DubPolice.exe: opens the window, or does the conversion when called with --engine."""
 import multiprocessing
 import sys
 

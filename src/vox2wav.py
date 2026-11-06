@@ -14,9 +14,16 @@ SPEEX_SET_ENH = 0
 SPEEX_GET_FRAME_SIZE = 3
 
 
+_dll_folders = set()
+
+
 class Speex:
     def __init__(self, dll_path, mode):
-        os.add_dll_directory(os.path.dirname(dll_path))
+        # Windows refuses further entries after a few thousand, so each folder is added once per process.
+        folder = os.path.dirname(dll_path)
+        if folder not in _dll_folders:
+            os.add_dll_directory(folder)
+            _dll_folders.add(folder)
         lib = ctypes.CDLL(dll_path)
         self.lib = lib
         lib.speex_lib_get_mode.restype = ctypes.c_void_p
@@ -72,11 +79,33 @@ def read_vox(archive, name, key):
         return f.read(size)
 
 
+def voice_header_size(blob):
+    """ERTM files (2009, 2010) have a fixed head; NIBM files (2007) name their class in it."""
+    if blob[:4] == b"ERTM":
+        return 20
+    if blob[:4] == b"NIBM":
+        return 16 + struct.unpack_from("<I", blob, 8)[0]
+    raise ValueError("expected an ERTM or NIBM voice file")
+
+
+def reveal_nibm(blob, cipher):
+    """NIBM files encrypt every 64th packet, starting with the first; only whole 8-byte blocks are affected."""
+    head = voice_header_size(blob)
+    size, _frame, _rate, _mode, _block, count = struct.unpack_from("<6I", blob, head + 5)
+    offsets = struct.unpack_from(f"<{count}I", blob, head + 29)
+    start = head + 29 + 4 * count
+    out = bytearray(blob)
+    for i in range(0, count, 64):
+        first = start + offsets[i]
+        last = start + (offsets[i + 1] if i + 1 < count else size)
+        whole = (last - first) // 8 * 8
+        out[first:first + whole] = cipher.decrypt(blob[first:first + whole], "<II")
+    return bytes(out)
+
+
 def parse_vox(blob):
     """Split a .vox file into stream properties and its packets."""
-    if blob[:4] != b"ERTM":
-        raise ValueError("expected an ERTM voice file")
-    b = blob[20:]
+    b = blob[voice_header_size(blob):]
     duration = struct.unpack_from("<f", b, 1)[0]
     size, frame, rate, mode, _block, count = struct.unpack_from("<6I", b, 5)
     offsets = list(struct.unpack_from(f"<{count}I", b, 29))

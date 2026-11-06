@@ -1,57 +1,121 @@
-/* The window: season tabs, paths, episode choice, and following a running conversion. */
+/* The window: season and language tabs, paths, episode choice, and following a running conversion. */
 "use strict";
 
-const LOCK = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" ' +
-  'stroke-linecap="round" stroke-linejoin="round" role="img" aria-label="Gesperrt"><rect x="5" y="11" width="14" height="10" rx="1.5"/>' +
-  '<path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>';
-
-const LOCKED_TITLE = "Die Akte liegt noch im Keller";
-const LOCKED_NOTE = "Noch kein Beweisstück. Diese Season kommt später dran.";
+const TEXT = {
+  german: {
+    htmlLang: "de", season: "Season", short: "DE",
+    title: "Der Fall der verschwundenen Stimmen",
+    caseName: "Fallakte", caseNo: "Aktenzeichen",
+    gameCaption: "Tatort (Remaster-Ordner)", gameEmpty: "Bitte Remaster-Ordner wählen",
+    sourceCaption: "Zeugen (alte Version)", sourceEmpty: "Bitte alte deutsche Version wählen",
+    episodes: "Episoden", installed: "installiert",
+    deess: "Scharfe S-Laute abmildern",
+    deessHint: "Dämpft scharfe S-Laute der alten Aufnahmen. Ausgeschaltet bleiben sie wie im Original.",
+    install: "Stimmen installieren", remove: "Fall zu den Akten legen", removeHint: "Stimmen entfernen", cancel: "Abbrechen",
+    photo: "Beweisfoto: die Erde mit Hasenohren", progress: "Fortschritt", languageGroup: "Sprache", seasonGroup: "Season",
+    stampWorking: "In Arbeit", stampSolved: "Gelöst", stampOpen: "Ungelöst",
+    open: "Beweisstück A: Das Remaster spricht nur noch Englisch.",
+    solved: "Fall gelöst: Sam und Max sprechen wieder.",
+    done: "Fall gelöst! Sam und Max sprechen wieder Deutsch.\nBitte im Spiel die Sprache auf Deutsch stellen.",
+    removed: "Akte geschlossen. Das Spiel spricht wieder Englisch.",
+    cancelled: "Abgebrochen. Am Spiel wurde nichts geändert.",
+    failed: "Das hat nicht geklappt:", unknown: "Unbekannter Fehler.",
+    starting: "Die Ermittlungen laufen …", removing: "Die Akte wird geschlossen …",
+    step: (episode, voices, done, total) => `Episode ${episode}: ${voices ? "Stimmen" : "Szenen"} ${done} von ${total}`,
+  },
+  french: {
+    htmlLang: "fr", season: "Saison", short: "FR",
+    title: "L'affaire des voix disparues",
+    caseName: "Dossier", caseNo: "Référence",
+    gameCaption: "Scène de crime (dossier du remaster)", gameEmpty: "Choisir le dossier du remaster",
+    sourceCaption: "Témoins (ancienne version)", sourceEmpty: "Choisir l'ancienne version française",
+    episodes: "Épisodes", installed: "installé",
+    deess: "", deessHint: "",
+    install: "Installer les voix", remove: "Classer l'affaire", removeHint: "Retirer les voix", cancel: "Annuler",
+    photo: "Photo à conviction : la Terre avec des oreilles de lapin", progress: "Progression", languageGroup: "Langue", seasonGroup: "Saison",
+    stampWorking: "En cours", stampSolved: "Résolu", stampOpen: "Non résolu",
+    open: "Pièce à conviction A : le remaster ne parle plus qu'anglais.",
+    solved: "Affaire résolue : Sam et Max ont retrouvé leur voix.",
+    done: "Affaire résolue ! Sam et Max parlent à nouveau français.\nRéglez la langue du jeu sur le français.",
+    removed: "Dossier classé. Le jeu reparle anglais.",
+    cancelled: "Annulé. Le jeu n'a pas été modifié.",
+    failed: "Ça n'a pas marché :", unknown: "Erreur inconnue.",
+    starting: "L'enquête est en cours…", removing: "Classement du dossier…",
+    step: (episode, voices, done, total) => `Épisode ${episode} : ${voices ? "voix" : "scènes"} ${done} sur ${total}`,
+  },
+};
 
 const SEASONS = [
   {
-    id: 1, name: "Season 1", subtitle: "Save the World", caseNo: "101–106", locked: true,
-    episodes: [["101", "Culture Shock"], ["102", "Situation Comedy"], ["103", "The Mole, the Mob and the Meatball"],
-      ["104", "Abe Lincoln Must Die!"], ["105", "Reality 2.0"], ["106", "Bright Side of the Moon"]],
+    id: 1, subtitle: "Save the World", caseNo: "101–106", languages: ["german", "french"],
+    episodes: [
+      ["101", "Culture-Schock", "Choc culturel"],
+      ["102", "Situation Comedy", "Situation : comédie"],
+      ["103", "Der Maulwurf, die Mafia und die Millionen", "La taupe, la Mafia et le nounours"],
+      ["104", "Abe Lincoln muss sterben", "Abe Lincoln doit mourir !"],
+      ["105", "Realität 2.0", "Reality 2.0"],
+      ["106", "Die helle Seite des Mondes", "La face éclairée de la Lune"],
+    ],
   },
   {
-    id: 2, name: "Season 2", subtitle: "Beyond Time and Space", caseNo: "201–205", locked: false,
-    episodes: [["201", "Eisstation Santa"], ["202", "Moai Better Blues"], ["203", "Nacht der tanzenden Toten"],
-      ["204", "Chariots of the Dogs"], ["205", "Was geht ab, Beelzebub?"]],
+    id: 2, subtitle: "Beyond Time and Space", caseNo: "201–205", languages: ["german", "french"],
+    episodes: [
+      ["201", "Eisstation Santa", "Station de glace Père Noël"],
+      ["202", "Moai Better Blues", "Moai Better Blues"],
+      ["203", "Nacht der tanzenden Toten", "Les démons de minuit moins le quart"],
+      ["204", "Chariots of the Dogs", "Chariots of the Dogs"],
+      ["205", "Was geht ab, Beelzebub?", "Quoi de neuf, Belzébulle ?"],
+    ],
   },
   {
-    id: 3, name: "Season 3", subtitle: "The Devil's Playhouse", caseNo: "301–305", locked: true,
-    episodes: [["301", "The Penal Zone"], ["302", "The Tomb of Sammun-Mak"], ["303", "They Stole Max's Brain!"],
-      ["304", "Beyond the Alley of the Dolls"], ["305", "The City That Dares Not Sleep"]],
+    id: 3, subtitle: "The Devil's Playhouse", caseNo: "301–305", languages: ["german"],
+    episodes: [
+      ["301", "Der Straf-Raum", "La Quarantaine Dimension"],
+      ["302", "Das Grab des Sammun-Mak", "Le tombeau de Sammun-Mak"],
+      ["303", "Sie haben Max' Hirn entführt!", "On a volé le cerveau de Max !"],
+      ["304", "Jenseits der Puppengasse", "Au-delà de l'allée des pantins"],
+      ["305", "Die Stadt, die nicht zu schlafen wagt", "La ville qui ne dort jamais"],
+    ],
   },
 ];
 
-const OPEN_NOTE = "Beweisstück A: Das Remaster spricht nur noch Englisch.";
-const SOLVED_NOTE = "Fall gelöst: Sam und Max sprechen wieder Deutsch.";
 const $ = (id) => document.getElementById(id);
 
-const state = {
-  season: 2,
-  game: "",
-  source: "",
-  gameOk: false,
-  sourceOk: false,
-  installed: [],
-  selected: new Set(SEASONS[1].episodes.map(([no]) => no)),
-  running: false,
-  mode: null,
-  note: OPEN_NOTE,
-  noteIsError: false,
-  chosen: [],
-};
+/* Paths, choices and messages belong to one season each; only one conversion runs at a time.
+   A note is either a key into TEXT, so it follows the language, or text from the conversion itself. */
+const cases = {};
+for (const season of SEASONS) {
+  cases[season.id] = {
+    game: "",
+    sources: {},
+    gameOk: false,
+    sourceOk: false,
+    installed: {},
+    selected: new Set(season.episodes.map(([no]) => no)),
+    deess: true,
+    note: { key: "open" },
+    noteIsError: false,
+    chosen: [],
+  };
+}
+
+const state = { season: 1, language: "german", running: false, runSeason: null, mode: null };
+
+const t = () => TEXT[state.language];
+const seasonNow = () => SEASONS.find((s) => s.id === state.season);
+const caseNow = () => cases[state.season];
+const sourceOf = (current) => current.sources[state.language] || "";
+const offered = (season) => season.languages.includes(state.language);
 
 function renderTabs() {
   const box = $("tabs");
   box.textContent = "";
+  box.setAttribute("aria-label", t().seasonGroup);
   for (const season of SEASONS) {
     const tab = document.createElement("button");
     tab.type = "button";
-    tab.className = "tab" + (season.locked ? " locked" : "");
+    tab.className = "tab";
+    tab.disabled = !offered(season);
     tab.setAttribute("role", "tab");
     tab.setAttribute("aria-controls", "panel");
     const selected = season.id === state.season;
@@ -60,8 +124,7 @@ function renderTabs() {
     tab.dataset.season = season.id;
     const name = document.createElement("span");
     name.className = "tab-name";
-    name.innerHTML = season.locked ? LOCK : "";
-    name.append(season.name);
+    name.textContent = `${t().season} ${season.id}`;
     const sub = document.createElement("span");
     sub.className = "tab-sub";
     sub.textContent = season.subtitle;
@@ -76,7 +139,8 @@ function onTabKey(event) {
   const step = { ArrowRight: 1, ArrowLeft: -1 }[event.key];
   if (!step) return;
   event.preventDefault();
-  const next = ((state.season - 1 + step + SEASONS.length) % SEASONS.length) + 1;
+  const open = SEASONS.filter(offered).map((s) => s.id);
+  const next = open[(open.indexOf(state.season) + step + open.length) % open.length];
   selectSeason(next);
   document.querySelector(`.tab[data-season="${next}"]`).focus();
 }
@@ -87,47 +151,61 @@ function selectSeason(id) {
 }
 
 function renderEpisodes(season) {
+  const current = caseNow();
   const list = $("episodeList");
   list.textContent = "";
-  for (const [no, title] of season.episodes) {
+  for (const [no, german, french] of season.episodes) {
     const row = document.createElement("label");
     row.className = "episode";
     const box = document.createElement("input");
     box.type = "checkbox";
-    box.checked = state.selected.has(no);
+    box.checked = current.selected.has(no);
     box.addEventListener("change", () => {
-      if (box.checked) state.selected.add(no);
-      else state.selected.delete(no);
+      if (box.checked) current.selected.add(no);
+      else current.selected.delete(no);
       renderButtons();
     });
     const text = document.createElement("span");
-    text.textContent = `${no} ${title}`;
+    text.textContent = `${no} ${state.language === "french" ? french : german}`;
     row.append(box, text);
-    if (state.installed.includes(no)) {
+    if (current.installed[no]) {
       const done = document.createElement("span");
       done.className = "done";
-      done.textContent = "installiert";
+      done.textContent = `${t().installed} (${TEXT[current.installed[no]].short})`;
       row.append(done);
     }
     list.append(row);
   }
 }
 
-function renderLocked(season) {
-  $("lockedText").textContent = `Diese Akte ist noch nicht geöffnet. Für ${season.name} gibt es noch keine Umwandlung.`;
-  const list = $("lockedList");
-  list.textContent = "";
-  for (const [no, title] of season.episodes) {
-    const row = document.createElement("div");
-    row.className = "row";
-    row.textContent = `${no} ${title}`;
-    list.append(row);
+function renderButtons() {
+  const current = caseNow();
+  $("install").disabled = state.running || !current.gameOk || !current.sourceOk || current.selected.size === 0;
+  $("remove").disabled = state.running || Object.keys(current.installed).length === 0;
+}
+
+function renderLanguage() {
+  document.documentElement.lang = t().htmlLang;
+  $("language").setAttribute("aria-label", t().languageGroup);
+  for (const tab of document.querySelectorAll(".lang-tab")) {
+    tab.setAttribute("aria-checked", tab.dataset.language === state.language ? "true" : "false");
+    tab.disabled = state.running;
   }
 }
 
-function renderButtons() {
-  $("install").disabled = !state.gameOk || !state.sourceOk || state.selected.size === 0;
-  $("remove").disabled = state.installed.length === 0;
+function renderStaticText() {
+  const words = t();
+  $("gameCaption").textContent = words.gameCaption;
+  $("sourceCaption").textContent = words.sourceCaption;
+  $("episodesLegend").textContent = words.episodes;
+  $("deessText").textContent = words.deess;
+  $("deessRow").title = words.deessHint;
+  $("install").textContent = words.install;
+  $("removeText").textContent = words.remove;
+  $("removeHint").textContent = words.removeHint;
+  $("cancel").textContent = words.cancel;
+  $("photo").alt = words.photo;
+  $("bar").setAttribute("aria-label", words.progress);
 }
 
 function pathValue(element, value, ok, emptyText) {
@@ -137,55 +215,78 @@ function pathValue(element, value, ok, emptyText) {
 }
 
 function stampText(season) {
-  if (season.locked) return ["Gesperrt", false];
-  if (state.running) return ["In Arbeit", false];
-  const all = season.episodes.every(([no]) => state.installed.includes(no));
-  return all ? ["Gelöst", true] : ["Ungelöst", false];
+  if (state.running && state.runSeason === season.id) return [t().stampWorking, false];
+  const all = season.episodes.every(([no]) => caseNow().installed[no]);
+  return all ? [t().stampSolved, true] : [t().stampOpen, false];
+}
+
+function noteText(solved) {
+  const note = caseNow().note;
+  if (!note.key) return note.text;
+  if (note.key !== "open") return t()[note.key];
+  return solved ? t().solved : t().open;
 }
 
 function render() {
-  const season = SEASONS.find((s) => s.id === state.season);
+  const season = seasonNow();
+  const current = caseNow();
+  const busyHere = state.running && state.runSeason === season.id;
   renderTabs();
-  document.body.classList.toggle("is-locked", season.locked);
-  $("title").textContent = season.locked ? LOCKED_TITLE : "Der Fall der verschwundenen Stimmen";
-  $("caseName").textContent = `Fallakte ${season.name}`;
-  $("caseNo").textContent = `Aktenzeichen ${season.caseNo}`;
+  renderLanguage();
+  renderStaticText();
+  $("title").textContent = t().title;
+  $("caseName").textContent = `${t().caseName} ${t().season} ${season.id}`;
+  $("caseNo").textContent = `${t().caseNo} ${season.caseNo}`;
   const [stamp, solved] = stampText(season);
   $("stamp").textContent = stamp;
   $("stamp").classList.toggle("solved", solved);
   const evidence = $("evidence");
-  const note = solved && state.note === OPEN_NOTE ? SOLVED_NOTE : state.note;
-  evidence.textContent = season.locked ? LOCKED_NOTE : note;
-  evidence.classList.toggle("error", !season.locked && state.noteIsError);
-  $("openView").hidden = season.locked;
-  $("lockedView").hidden = !season.locked;
-  if (season.locked) {
-    renderLocked(season);
-    return;
-  }
-  pathValue($("gameValue"), state.game, state.gameOk, "Bitte Remaster-Ordner wählen");
-  pathValue($("sourceValue"), state.source, state.sourceOk, "Bitte alte deutsche Version wählen");
+  evidence.textContent = noteText(solved);
+  evidence.classList.toggle("error", current.noteIsError);
+  pathValue($("gameValue"), current.game, current.gameOk, t().gameEmpty);
+  pathValue($("sourceValue"), sourceOf(current), current.sourceOk, t().sourceEmpty);
   $("gameRow").disabled = state.running;
   $("sourceRow").disabled = state.running;
-  $("episodes").disabled = state.running;
+  $("episodes").disabled = busyHere;
   renderEpisodes(season);
-  $("actions").hidden = state.running;
-  $("running").hidden = !state.running;
+  $("deessRow").hidden = state.language !== "german";
+  $("deess").checked = current.deess;
+  $("deess").disabled = busyHere;
+  $("actions").hidden = busyHere;
+  $("running").hidden = !busyHere;
   renderButtons();
 }
 
-async function refreshPaths() {
-  const result = await window.pywebview.api.check(state.game, state.source);
-  state.gameOk = result.game_ok;
-  state.sourceOk = result.source_ok;
-  state.installed = result.installed;
+async function refreshPaths(id) {
+  const current = cases[id];
+  if (!window.pywebview) return;
+  const result = await window.pywebview.api.check(id, current.game, sourceOf(current));
+  current.gameOk = result.game_ok;
+  current.sourceOk = result.source_ok;
+  current.installed = result.installed;
 }
 
 async function pick(field) {
-  const folder = await window.pywebview.api.pick_folder(state[field]);
+  const id = state.season;
+  const current = cases[id];
+  const folder = await window.pywebview.api.pick_folder(field === "game" ? current.game : sourceOf(current));
   if (!folder) return;
-  state[field] = folder;
-  await refreshPaths();
+  if (field === "game") current.game = folder;
+  else current.sources[state.language] = folder;
+  await refreshPaths(id);
+  render();
+}
+
+/* Each language has its own old release, so the witness folder is remembered per language. */
+async function selectLanguage(language) {
+  if (state.running || language === state.language) return;
+  state.language = language;
+  if (!offered(seasonNow())) state.season = SEASONS.find(offered).id;
+  for (const season of SEASONS) {
+    cases[season.id].sourceOk = false;
+    await refreshPaths(season.id);
+  }
+  if (window.pywebview) window.pywebview.api.set_language(language);
   render();
 }
 
@@ -198,90 +299,99 @@ function setProgress(fraction, text) {
 
 /* Each episode has two phases of about equal length: voices, then timing. */
 function overallProgress(step, done, total) {
+  const chosen = cases[state.runSeason].chosen;
   const match = /^(\S+) (\d+)$/.exec(step);
-  if (!match || !state.chosen.length) return 0;
-  const index = Math.max(0, state.chosen.indexOf(match[2]));
+  if (!match || !chosen.length) return 0;
+  const index = Math.max(0, chosen.indexOf(match[2]));
   const phase = match[1] === "Stimmen" ? 0 : 0.5;
-  return (index + phase + (0.5 * done) / Math.max(total, 1)) / state.chosen.length;
+  return (index + phase + (0.5 * done) / Math.max(total, 1)) / chosen.length;
 }
 
 function friendlyStep(step, done, total) {
   const match = /^(\S+) (\d+)$/.exec(step);
   if (!match) return step;
-  const noun = match[1] === "Stimmen" ? "Stimmen" : "Szenen";
-  return `Episode ${match[2]}: ${noun} ${done} von ${total}`;
+  return t().step(match[2], match[1] === "Stimmen", done, total);
 }
 
 async function follow() {
+  const running = cases[state.runSeason];
   const update = await window.pywebview.api.poll();
   if (update.progress) {
     const { step, done, total } = update.progress;
     setProgress(overallProgress(step, done, total), friendlyStep(step, done, total));
   }
-  if (update.lines.length) {
-    state.note = update.lines.slice(-4).join("\n");
-    state.noteIsError = false;
-    if (state.season === 2) $("evidence").textContent = state.note;
+  /* The conversion reports in German; the French window keeps its own message instead. */
+  if (update.lines.length && state.language === "german") {
+    running.note = { text: update.lines.slice(-4).join("\n") };
+    running.noteIsError = false;
+    if (state.season === state.runSeason) $("evidence").textContent = running.note.text;
   }
   if (update.finished === null) {
     setTimeout(follow, 250);
     return;
   }
+  const id = state.runSeason;
   state.running = false;
-  await refreshPaths();
+  state.runSeason = null;
+  await refreshPaths(id);
   if (update.finished === 0) {
-    state.note = state.mode === "remove"
-      ? "Akte geschlossen. Das Spiel spricht wieder Englisch."
-      : "Fall gelöst! Sam und Max sprechen wieder Deutsch.\nBitte im Spiel die Sprache auf Deutsch stellen.";
-    state.noteIsError = false;
+    running.note = { key: state.mode === "remove" ? "removed" : "done" };
+    running.noteIsError = false;
   } else if (update.cancelled) {
-    state.note = "Abgebrochen. Am Spiel wurde nichts geändert.";
-    state.noteIsError = false;
+    running.note = { key: "cancelled" };
+    running.noteIsError = false;
   } else {
-    state.note = "Das hat nicht geklappt:\n" + (update.tail || "Unbekannter Fehler.");
-    state.noteIsError = true;
+    running.note = { text: `${t().failed}\n${update.tail || t().unknown}` };
+    running.noteIsError = true;
   }
   render();
 }
 
-function beginRun(mode, text) {
+function beginRun(mode, key) {
   state.running = true;
+  state.runSeason = state.season;
   state.mode = mode;
-  state.note = text;
-  state.noteIsError = false;
-  setProgress(0, text);
+  caseNow().note = { key };
+  caseNow().noteIsError = false;
+  setProgress(0, t()[key]);
   render();
   follow();
 }
 
 async function install() {
-  const season = SEASONS.find((s) => s.id === 2);
-  state.chosen = season.episodes.map(([no]) => no).filter((no) => state.selected.has(no));
-  const error = await window.pywebview.api.install(state.game, state.source, state.chosen);
+  const current = caseNow();
+  current.chosen = seasonNow().episodes.map(([no]) => no).filter((no) => current.selected.has(no));
+  const error = await window.pywebview.api.install(current.game, sourceOf(current), current.chosen, current.deess, state.language);
   if (error) {
-    state.note = error;
-    state.noteIsError = true;
+    current.note = { text: error };
+    current.noteIsError = true;
     render();
     return;
   }
-  beginRun("install", "Die Ermittlungen laufen …");
+  beginRun("install", "starting");
 }
 
 async function removeDub() {
-  const started = await window.pywebview.api.uninstall(state.game);
-  if (started) beginRun("remove", "Die Akte wird geschlossen …");
+  const started = await window.pywebview.api.uninstall(caseNow().game, state.language);
+  if (started) beginRun("remove", "removing");
 }
 
 window.addEventListener("pywebviewready", async () => {
   const initial = await window.pywebview.api.initial_state();
-  state.game = initial.game;
-  state.source = initial.source;
-  await refreshPaths();
+  for (const [id, values] of Object.entries(initial)) {
+    cases[id].game = values.game;
+    cases[id].sources = values.sources;
+    await refreshPaths(Number(id));
+  }
   render();
 });
 
 $("gameRow").addEventListener("click", () => pick("game"));
 $("sourceRow").addEventListener("click", () => pick("source"));
+$("deess").addEventListener("change", (event) => { caseNow().deess = event.target.checked; });
+for (const tab of document.querySelectorAll(".lang-tab")) {
+  tab.addEventListener("click", () => selectLanguage(tab.dataset.language));
+}
 $("install").addEventListener("click", install);
 $("remove").addEventListener("click", removeDub);
 $("cancel").addEventListener("click", () => window.pywebview.api.cancel());

@@ -16,8 +16,21 @@ import webview
 HERE = getattr(sys, "_MEIPASS", os.path.dirname(os.path.abspath(__file__)))
 FROZEN = getattr(sys, "frozen", False)
 APP_DIR = os.path.dirname(sys.executable) if FROZEN else os.path.dirname(os.path.abspath(__file__))
-GAME_FOLDER = "Sam & Max Beyond Time and Space"
+GAMES = {
+    1: {"folder": "Sam & Max Save the World", "exe": "SamMax100.exe", "first": "101"},
+    2: {"folder": "Sam & Max Beyond Time and Space", "exe": "SamMax200.exe", "first": "201"},
+    3: {"folder": "Sam & Max The Devil's Playhouse", "exe": "SamMax300.exe", "first": "301"},
+}
 MANIFEST = "SamMax_GermanDub.json"
+SOURCE_FOLDERS = {"german": "Deutsch", "french": "Französisch"}
+WINDOW_TITLES = {
+    "german": "Dub Police · Der Fall der verschwundenen Stimmen",
+    "french": "Dub Police · L'affaire des voix disparues",
+}
+REMOVE_QUESTIONS = {
+    "german": ("Fall zu den Akten legen", "Stimmen wieder entfernen? Das Spiel spricht danach wieder Englisch."),
+    "french": ("Classer l'affaire", "Retirer les voix ? Le jeu reparlera ensuite anglais."),
+}
 NO_WINDOW = subprocess.CREATE_NO_WINDOW if os.name == "nt" else 0
 WEBVIEW2_URL = "https://developer.microsoft.com/microsoft-edge/webview2/"
 
@@ -41,24 +54,32 @@ def steam_libraries():
     return folders
 
 
-def is_game(path):
-    return bool(path) and os.path.isfile(os.path.join(path, "SamMax200.exe")) and os.path.isdir(os.path.join(path, "Archives"))
+def is_game(path, season):
+    return bool(path) and os.path.isfile(os.path.join(path, GAMES[season]["exe"])) and os.path.isdir(os.path.join(path, "Archives"))
 
 
-def find_game():
+def find_game(season):
     for library in steam_libraries():
-        candidate = os.path.join(library, "steamapps", "common", GAME_FOLDER)
-        if is_game(candidate):
+        candidate = os.path.join(library, "steamapps", "common", GAMES[season]["folder"])
+        if is_game(candidate, season):
             return candidate
     return ""
 
 
+def local_source(season, language):
+    """The folder Quelldaten/<language>/Season <n> next to the program, if it holds this season."""
+    local = os.path.join(APP_DIR, "Quelldaten", SOURCE_FOLDERS[language], f"Season {season}")
+    return local if os.path.isdir(os.path.join(local, f"SamMax{GAMES[season]['first']}")) else ""
+
+
 def installed_episodes(game):
+    """{episode: language}; installs from before the language choice were German."""
     try:
         with open(os.path.join(game, MANIFEST), encoding="utf-8") as f:
-            return sorted(json.load(f).get("episodes", {}))
+            episodes = json.load(f).get("episodes", {})
     except (OSError, ValueError):
-        return []
+        return {}
+    return {e: info.get("language", "german") for e, info in episodes.items()}
 
 
 class Backend:
@@ -78,26 +99,31 @@ class Backend:
         self._window = window
 
     def initial_state(self):
-        local = os.path.join(APP_DIR, "Quelldaten")
-        return {"game": find_game(), "source": local if os.path.isdir(local) else ""}
+        return {
+            str(season): {"game": find_game(season), "sources": {language: local_source(season, language) for language in SOURCE_FOLDERS}}
+            for season in GAMES
+        }
 
-    def check(self, game, source):
-        ok = is_game(game)
-        return {"game_ok": ok, "source_ok": bool(source) and os.path.isdir(source), "installed": installed_episodes(game) if ok else []}
+    def check(self, season, game, source):
+        ok = is_game(game, season)
+        return {"game_ok": ok, "source_ok": bool(source) and os.path.isdir(source), "installed": installed_episodes(game) if ok else {}}
 
     def pick_folder(self, current):
         start = current if current and os.path.isdir(current) else ""
         result = self._window.create_file_dialog(webview.FileDialog.FOLDER, directory=start)
         return os.path.normpath(result[0]) if result else ""
 
-    def install(self, game, source, episodes):
+    def install(self, game, source, episodes, deess=True, language="german"):
         if not episodes:
             return "Bitte mindestens eine Episode auswählen."
-        return self._start(["--game", game, "--source", source, "--episodes", *episodes])
+        return self._start(["--game", game, "--source", source, "--language", language, "--episodes", *episodes, *([] if deess else ["--no-deess"])])
 
-    def uninstall(self, game):
-        question = "Deutsche Stimmen wieder entfernen? Das Spiel spricht danach wieder Englisch."
-        if not self._window.create_confirmation_dialog("Fall zu den Akten legen", question):
+    def set_language(self, language):
+        self._window.set_title(WINDOW_TITLES[language])
+
+    def uninstall(self, game, language="german"):
+        title, question = REMOVE_QUESTIONS[language]
+        if not self._window.create_confirmation_dialog(title, question):
             return False
         return self._start(["--game", game, "--uninstall"]) is None
 
@@ -164,7 +190,7 @@ class Backend:
         if line.startswith("PROGRESS "):
             step, done, total = line[9:].rsplit(" ", 2)
             self._progress = {"step": step, "done": int(done), "total": int(total)}
-        elif line:
+        elif line and not line.startswith("DETAIL "):
             self._recent.append(line)
             self._messages.put(line)
 
@@ -172,7 +198,7 @@ class Backend:
 def run():
     backend = Backend()
     window = webview.create_window(
-        "Sam & Max: Deutsche Synchronisation",
+        WINDOW_TITLES["german"],
         url=os.path.join(HERE, "ui", "index.html"),
         js_api=backend,
         width=976,
@@ -188,7 +214,7 @@ def run():
             None,
             f"Das Fenster konnte nicht geöffnet werden. Vermutlich fehlt die WebView2-Runtime von Microsoft:\n"
             f"{WEBVIEW2_URL}\n\nFehler: {err}",
-            "Sam & Max: Deutsche Synchronisation",
+            "Dub Police",
             0x10,
         )
         sys.exit(1)

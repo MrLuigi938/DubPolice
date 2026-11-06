@@ -1,4 +1,4 @@
-# Spieldaten sind urheberrechtlich geschützt und bleiben draußen
+# Game data is protected by copyright and stays out
 Quelldaten/
 *.ttarch
 *.ttarch2
@@ -13,7 +13,7 @@ Quelldaten/
 *_lines.csv
 *_mapping.csv
 
-# Fremdprogramme, siehe README
+# Third-party programs, see docs/development.md
 bin/*.dll
 bin/*.exe
 
@@ -25,6 +25,3 @@ dist/
 __pycache__/
 *.pyc
 .venv/
-
-# Von der App übernommene Arbeitsdateien
-samax-mod/

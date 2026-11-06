@@ -74,7 +74,9 @@ def port(d, hashes, seconds, table):
         wanted = s + seconds[rid]
         later = [x for x in starts if x > s + 1e-3]
         next_start = later[0] if later else None
-        fits = next_start is None or wanted <= next_start + 1e-3
+        # Lines that already overlap in the original, like characters interrupting, may keep overlapping.
+        overlaps = next_start is not None and next_start < mapped_end - 1e-3
+        fits = next_start is None or wanted <= next_start + 1e-3 or overlaps
         end = wanted if fits else next_start
         delta = end - mapped_end
         if delta:
