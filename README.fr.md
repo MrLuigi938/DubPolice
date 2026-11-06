@@ -22,7 +22,7 @@
 ## Points forts
 
 - **Les voix d'origine** – les enregistrements de l'époque, ni nouveau doublage ni IA.
-- **Les trois saisons** – Save the World, Beyond Time and Space et The Devil's Playhouse (cette dernière en allemand pour l'instant).
+- **Les trois saisons** – Save the World, Beyond Time and Space et The Devil's Playhouse (cette dernière uniquement en allemand).
 - **Les scènes attendent la fin de la phrase** – les phrases françaises et allemandes sont souvent plus longues que les anglaises. Les scènes leur laissent la place, pour que personne ne coupe la parole. Les voix ne sont jamais accélérées.
 - **Lèvres et rythme suivent** – les mouvements de la bouche sont étirés à la longueur de la nouvelle phrase.
 - **Un son propre** – les anciens enregistrements sont soigneusement convertis au format actuel.
@@ -33,11 +33,9 @@
 
 | Saison | Français | Allemand |
 |---|---|---|
-| **1** Save the World | ✓ nouveau | ✓ 11 392 répliques sur 11 432 |
-| **2** Beyond Time and Space | ✓ nouveau | ✓ 11 445 répliques sur 11 477 |
-| **3** The Devil's Playhouse | – pas encore de version française | ✓ 10 159 répliques sur 10 172 |
-
-L'allemand a été testé en jeu. Le français est tout nouveau : deux épisodes (101 et 201) ont été construits et vérifiés automatiquement, mais pas encore joués.
+| **1** Save the World | ✓ 11 392 répliques sur 11 432 | ✓ 11 392 répliques sur 11 432 |
+| **2** Beyond Time and Space | ✓ 11 446 répliques sur 11 477 | ✓ 11 445 répliques sur 11 477 |
+| **3** The Devil's Playhouse | – pas de version française | ✓ 10 159 répliques sur 10 172 |
 
 Les rares répliques restantes n'ont pas d'enregistrement ancien correspondant et restent en anglais.
 

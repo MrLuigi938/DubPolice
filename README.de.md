@@ -33,11 +33,9 @@
 
 | Season | Deutsch | Französisch |
 |---|---|---|
-| **1** Save the World | ✓ 11.392 von 11.432 Zeilen | ✓ neu |
-| **2** Beyond Time and Space | ✓ 11.445 von 11.477 Zeilen | ✓ neu |
-| **3** The Devil's Playhouse | ✓ 10.159 von 10.172 Zeilen | – noch keine französische Fassung vorhanden |
-
-Deutsch wurde im Spiel gespielt. Französisch ist ganz neu: Zwei Episoden (101 und 201) wurden gebaut und automatisch geprüft, aber noch nicht gespielt.
+| **1** Save the World | ✓ 11.392 von 11.432 Zeilen | ✓ 11.392 von 11.432 Zeilen |
+| **2** Beyond Time and Space | ✓ 11.445 von 11.477 Zeilen | ✓ 11.446 von 11.477 Zeilen |
+| **3** The Devil's Playhouse | ✓ 10.159 von 10.172 Zeilen | – keine französische Fassung vorhanden |
 
 Die wenigen übrigen Zeilen haben keine passende alte Aufnahme und bleiben englisch.
 

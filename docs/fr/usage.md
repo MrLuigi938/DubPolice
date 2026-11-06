@@ -8,7 +8,7 @@ Dub Police lit les voix dans votre propre copie de l'ancien jeu, dans la langue 
 |---|---|---|
 | **1** Save the World (2007) | Le dossier installé | Le dossier installé |
 | **2** Beyond Time and Space (2009) | Le dossier installé ou le disque | Le dossier installé ou le disque |
-| **3** The Devil's Playhouse (2010) | pas encore disponible | Le dossier installé |
+| **3** The Devil's Playhouse (2010) | pas de version française | Le dossier installé |
 
 Sélectionnez le dossier principal de l'ancien jeu. Dub Police y cherche lui-même les bons fichiers. Le disque de la saison 2 contient déjà les deux langues. Vous pouvez monter une image ISO et sélectionner son lecteur.
 
@@ -43,7 +43,7 @@ Chaque épisode n'a qu'une langue à la fois. Si vous installez un épisode dans
 - **Les sous-titres** viennent du remaster et peuvent différer légèrement des anciens enregistrements, car le remaster a en partie de nouvelles traductions.
 - **Courts extraits.** Certaines scènes ne jouent qu'une partie d'une autre, comme les visions du futur de l'épisode 301. L'original fait de même, donc une phrase peut s'y arrêter en plein extrait.
 - **La musique** peut se décaler légèrement de l'image dans les longues scènes, car elle continue pendant que la scène attend.
-- **Testé avec** les versions Steam sous Windows. Le français n'a été vérifié automatiquement que sur deux épisodes et n'a pas encore été joué.
+- **Testé avec** les versions Steam sous Windows. Tous les épisodes français ont été construits et vérifiés automatiquement, mais pas encore joués.
 - **Le correcteur de « s » sifflants** n'existe que pour l'allemand. En français, les voix restent telles quelles sur ce point.
 
 ## Dépannage

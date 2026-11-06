@@ -8,7 +8,7 @@ Dub Police liest die Stimmen aus deiner eigenen Kopie des alten Spiels, in der g
 |---|---|---|
 | **1** Save the World (2007) | Der installierte Ordner | Der installierte Ordner |
 | **2** Beyond Time and Space (2009) | Der installierte Ordner oder die Disc | Der installierte Ordner oder die Disc |
-| **3** The Devil's Playhouse (2010) | Der installierte Ordner | noch nicht verfügbar |
+| **3** The Devil's Playhouse (2010) | Der installierte Ordner | keine französische Fassung vorhanden |
 
 Wähle den Hauptordner des alten Spiels. Dub Police sucht darin selbst nach den richtigen Dateien. Die Disc von Season 2 enthält bereits beide Sprachen. Eine ISO kannst du einbinden und ihr Laufwerk auswählen.
 
@@ -47,7 +47,7 @@ Jede Episode hat immer nur eine Sprache. Installierst du eine Episode in der and
 - **Untertitel** kommen aus dem Remaster und können leicht von den alten Aufnahmen abweichen, weil das Remaster teils neue Übersetzungen hat.
 - **Kurze Ausschnitte.** Manche Szenen spielen nur einen Teil einer anderen ab, etwa die Zukunftsvisionen in Episode 301. Das macht auch das Original, dort kann ein Satz mitten im Ausschnitt enden.
 - **Musik** kann in langen Szenen leicht vom Bild abweichen, weil sie weiterläuft, während die Szene wartet.
-- **Getestet mit** den Steam-Fassungen unter Windows. Französisch ist bisher nur an zwei Episoden automatisch geprüft und noch nicht gespielt worden.
+- **Getestet mit** den Steam-Fassungen unter Windows. Alle französischen Episoden wurden gebaut und automatisch geprüft, aber noch nicht gespielt.
 
 ## Hilfe bei Problemen
 

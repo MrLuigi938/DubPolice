@@ -33,11 +33,9 @@
 
 | Season | German | French |
 |---|---|---|
-| **1** Save the World | ✓ 11,392 of 11,432 lines | ✓ new |
-| **2** Beyond Time and Space | ✓ 11,445 of 11,477 lines | ✓ new |
-| **3** The Devil's Playhouse | ✓ 10,159 of 10,172 lines | – no French version available yet |
-
-German has been played in the game. French is brand new: two episodes (101 and 201) have been built and checked automatically, but not yet played.
+| **1** Save the World | ✓ 11,392 of 11,432 lines | ✓ 11,392 of 11,432 lines |
+| **2** Beyond Time and Space | ✓ 11,445 of 11,477 lines | ✓ 11,446 of 11,477 lines |
+| **3** The Devil's Playhouse | ✓ 10,159 of 10,172 lines | – no French version exists |
 
 The few remaining lines have no matching old recording and stay in English.
 

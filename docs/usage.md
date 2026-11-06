@@ -8,7 +8,7 @@ Dub Police reads the voices from your own copy of the old game, in the language 
 |---|---|---|
 | **1** Save the World (2007) | The installed folder | The installed folder |
 | **2** Beyond Time and Space (2009) | The installed folder or the disc | The installed folder or the disc |
-| **3** The Devil's Playhouse (2010) | The installed folder | not available yet |
+| **3** The Devil's Playhouse (2010) | The installed folder | no French version exists |
 
 Select the main folder of the old game. Dub Police searches it for the right files, so you don't have to pick them one by one. The Season 2 disc already contains both languages. Mount an ISO and select its drive.
 
@@ -47,7 +47,7 @@ Each episode holds one language at a time. Install an episode in the other langu
 - **Subtitles** come from the remaster and can differ slightly from the old recordings, because the remaster partly has new translations.
 - **Short excerpts.** Some scenes play only part of another scene, such as the visions of the future in Episode 301. The original does the same, so a sentence can end mid-excerpt there.
 - **Music** can drift slightly from the picture in long scenes, as it keeps running while the scene waits.
-- **Tested with** the Steam versions on Windows. French has only been checked automatically on two episodes so far and has not yet been played.
+- **Tested with** the Steam versions on Windows. All French episodes have been built and checked automatically, but not yet played.
 
 ## Troubleshooting
 
