@@ -68,6 +68,10 @@ Teile des Formatwissens stammen aus den Open-Source-[TTG Tools](https://github.c
 
 ## Lizenz
 
-Copyright © 2026 Luis Blum. Eine Open-Source-Lizenz ist noch nicht festgelegt.
+Copyright © 2026 Luis Blum
+
+Dub Police ist freie Software unter der [GNU General Public License v3.0](LICENSE). Du darfst es nutzen, ändern und weitergeben, auch kommerziell, solange geänderte Versionen unter derselben Lizenz und mit Quellcode veröffentlicht werden.
+
+Die Lizenz gilt für den eigenen Code von Dub Police. Sie gilt nicht für die Spiele, ihre Aufnahmen, Namen und Figuren, auch nicht für das Sam-&-Max-Artwork im Hintergrundbild des Fensters. Fremde Bestandteile behalten ihre eigenen Lizenzen, siehe [licenses/](licenses).
 
 Dub Police ist mit Hilfe von KI entstanden ([Claude](https://claude.ai) von Anthropic).
