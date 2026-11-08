@@ -33,9 +33,9 @@
 
 | Season | Deutsch | Französisch |
 |---|---|---|
-| **1** Save the World | ✓ 11.392 von 11.432 Zeilen | ✓ 11.392 von 11.432 Zeilen |
-| **2** Beyond Time and Space | ✓ 11.445 von 11.477 Zeilen | ✓ 11.446 von 11.477 Zeilen |
-| **3** The Devil's Playhouse | ✓ 10.159 von 10.172 Zeilen | – keine französische Fassung vorhanden |
+| **1** Save the World | ✓ 11.422 von 11.433 Zeilen | ✓ 11.420 von 11.433 Zeilen |
+| **2** Beyond Time and Space | ✓ 11.457 von 11.477 Zeilen | ✓ 11.457 von 11.477 Zeilen |
+| **3** The Devil's Playhouse | ✓ 10.204 von 10.217 Zeilen | – keine französische Fassung vorhanden |
 
 Die wenigen übrigen Zeilen haben keine passende alte Aufnahme und bleiben englisch.
 
@@ -43,8 +43,8 @@ Die wenigen übrigen Zeilen haben keine passende alte Aufnahme und bleiben engli
 
 **Du brauchst:** Windows, ein Remaster auf Steam und **deine eigene alte Version** in der gewünschten Sprache. Sie ist nicht enthalten.
 
-1. `DubPolice.exe` von der [Release-Seite](https://github.com/MrLuigi938/DubPolice/releases/latest) laden und das Spiel schließen.
-2. Starten. Oben links die Season wählen, oben rechts die Sprache.
+1. `DubPolice.zip` von der [Release-Seite](https://github.com/MrLuigi938/DubPolice/releases/latest) laden, in einen beliebigen Ordner entpacken und das Spiel schließen.
+2. `DubPolice.exe` in diesem Ordner starten. Oben links die Season wählen, oben rechts die Sprache.
 3. Auf **Zeugen** klicken und deine alte Version auswählen: den installierten Ordner, bei Season 2 auch die Disc.
 4. Episoden wählen und **Stimmen installieren** klicken. Eine ganze Season dauert etwa 12 bis 23 Minuten und belegt 620 bis 810 MB.
 5. Im Spiel dieselbe Sprache einstellen. Fertig.

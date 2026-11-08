@@ -33,9 +33,9 @@
 
 | Saison | Français | Allemand |
 |---|---|---|
-| **1** Save the World | ✓ 11 392 répliques sur 11 432 | ✓ 11 392 répliques sur 11 432 |
-| **2** Beyond Time and Space | ✓ 11 446 répliques sur 11 477 | ✓ 11 445 répliques sur 11 477 |
-| **3** The Devil's Playhouse | – pas de version française | ✓ 10 159 répliques sur 10 172 |
+| **1** Save the World | ✓ 11 420 répliques sur 11 433 | ✓ 11 422 répliques sur 11 433 |
+| **2** Beyond Time and Space | ✓ 11 457 répliques sur 11 477 | ✓ 11 457 répliques sur 11 477 |
+| **3** The Devil's Playhouse | – pas de version française | ✓ 10 204 répliques sur 10 217 |
 
 Les rares répliques restantes n'ont pas d'enregistrement ancien correspondant et restent en anglais.
 
@@ -43,8 +43,8 @@ Les rares répliques restantes n'ont pas d'enregistrement ancien correspondant e
 
 **Il vous faut :** Windows, un remaster sur Steam et **votre propre copie de l'ancien jeu** dans la langue souhaitée. Elle n'est pas fournie.
 
-1. Téléchargez `DubPolice.exe` depuis la [page des versions](https://github.com/MrLuigi938/DubPolice/releases/latest) et fermez le jeu.
-2. Lancez-le. Choisissez la saison en haut à gauche et la langue en haut à droite (**Français**).
+1. Téléchargez `DubPolice.zip` depuis la [page des versions](https://github.com/MrLuigi938/DubPolice/releases/latest), décompressez-le dans le dossier de votre choix et fermez le jeu.
+2. Lancez `DubPolice.exe` dans ce dossier. Choisissez la saison en haut à gauche et la langue en haut à droite (**Français**).
 3. Cliquez sur **Témoins** et sélectionnez votre ancienne version : le dossier installé ou, pour la saison 2, aussi le disque.
 4. Choisissez les épisodes et cliquez sur **Installer les voix**. Une saison complète prend environ 12 à 23 minutes et occupe 620 à 810 Mo.
 5. Réglez le jeu sur la même langue. Terminé.

@@ -33,9 +33,9 @@
 
 | Season | German | French |
 |---|---|---|
-| **1** Save the World | ✓ 11,392 of 11,432 lines | ✓ 11,392 of 11,432 lines |
-| **2** Beyond Time and Space | ✓ 11,445 of 11,477 lines | ✓ 11,446 of 11,477 lines |
-| **3** The Devil's Playhouse | ✓ 10,159 of 10,172 lines | – no French version exists |
+| **1** Save the World | ✓ 11,422 of 11,433 lines | ✓ 11,420 of 11,433 lines |
+| **2** Beyond Time and Space | ✓ 11,457 of 11,477 lines | ✓ 11,457 of 11,477 lines |
+| **3** The Devil's Playhouse | ✓ 10,204 of 10,217 lines | – no French version exists |
 
 The few remaining lines have no matching old recording and stay in English.
 
@@ -43,8 +43,8 @@ The few remaining lines have no matching old recording and stay in English.
 
 **You need:** Windows, a remaster on Steam and **your own copy of the old game** in the language you want. It is not included.
 
-1. Download `DubPolice.exe` from the [releases page](https://github.com/MrLuigi938/DubPolice/releases/latest) and close the game.
-2. Start it. Choose the season at the top left and the language at the top right.
+1. Download `DubPolice.zip` from the [releases page](https://github.com/MrLuigi938/DubPolice/releases/latest), unpack it to a folder of your choice and close the game.
+2. Start `DubPolice.exe` in that folder. Choose the season at the top left and the language at the top right.
 3. Click **Zeugen / Témoins** and select your old version: the installed folder, or for Season 2 also the disc.
 4. Choose your episodes and click **Stimmen installieren / Installer les voix**. A full season takes about 12 to 23 minutes and 620 to 810 MB.
 5. Set the game to the same language. Done.

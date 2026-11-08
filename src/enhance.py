@@ -14,6 +14,7 @@ MP3_KBPS = 128
 FSB_MODE_MPEG = 11
 RATE_CODE_44100 = 8
 MP3_FRAME = 1152
+TAIL_SECONDS = 0.15
 
 # Frequency (Hz) and gain (dB): about half to three quarters of the measured difference to the remaster.
 EQ_POINTS = (
@@ -115,6 +116,12 @@ def enhance(pcm, source_rate, deess_setting=None):
     x = add_air(x)
     x *= 10 ** (LEVEL_DB / 20)
     return soft_limit(x)
+
+
+def pad_end(samples):
+    """The old recordings stop right at the last sound; the remaster's have a little silence there.
+    Without it, the game can swallow the last letters when it starts a line a moment late."""
+    return np.concatenate((samples, np.zeros(int(OUTPUT_RATE * TAIL_SECONDS))))
 
 
 def split_frames(raw):

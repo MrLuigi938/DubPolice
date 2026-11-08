@@ -13,7 +13,7 @@ Then:
 powershell -ExecutionPolicy Bypass -File build.ps1
 ```
 
-The program ends up in `dist/DubPolice.exe`. To run without a window:
+The program ends up in the folder `dist/DubPolice`, ready to share as `dist/DubPolice.zip`. It is built as a folder rather than a single exe, because virus scanners flag self-extracting exes far more often. To run without a window:
 
 ```bash
 python src/launcher.py --engine --game "<remaster folder>" --source "<old version>" --language french --episodes 101 102
@@ -105,6 +105,12 @@ Measured on 40 lines from Episode 301, the old recordings are close to the remas
 1. **exact:** normalised text is unique
 2. **same text:** several matches, then same speaker and closest length
 3. **close:** text similarity of 0.92 or more, such as corrected typos
+4. **dubbed text:** the remaster's own German or French subtitle matches the text of an old recording
+5. **similar:** last resort for the same speaker: an unused recording whose English text scores at least 0.6 and clearly beats the next one; only for lines of 12 characters or more
+
+Takes of 0.25 s or less are often cut off in the old game. If the same speaker has a complete take of the same dubbed text, it is used instead (**whole take**). Lines are also looked up in the season's shared `Common` archive, where standard replies live.
+
+Every voice gets 0.15 s of silence at the end, like the English recordings; without it the game cut off the last letters.
 
 The results of each run are written to the work folder as `epNNN_lines.csv`.
 

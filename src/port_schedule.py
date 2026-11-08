@@ -30,8 +30,9 @@ def time_map(en, de):
 
 def pairs_to_map(pairs):
     table = {}
+    # Finer than the 2 ms ramps of cutscene pauses: rounding to milliseconds put the next line inside the ramp.
     for x, y in pairs:
-        table.setdefault(round(x, 3), round(y, 3))
+        table.setdefault(round(x, 6), round(y, 6))
     xs = sorted(table)
     ys = [table[x] for x in xs]
     for i in range(1, len(ys)):

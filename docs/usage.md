@@ -17,7 +17,7 @@ Select the main folder of the old game. Dub Police searches it for the right fil
 ## Installing
 
 1. Close the game. Dub Police refuses to start while it is running.
-2. Start `DubPolice.exe`. The first start can take up to half a minute while Windows checks the new file.
+2. Unpack `DubPolice.zip` and start `DubPolice.exe`. Keep the `_internal` folder next to it. The first start can take a moment while Windows checks the new files.
 3. Choose the season at the top left and the language at the top right. The whole window follows the language.
 4. Check the two paths:
    - **Tatort / Scène de crime** is your remaster. Steam games are found by themselves.

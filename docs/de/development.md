@@ -13,7 +13,7 @@ Danach:
 powershell -ExecutionPolicy Bypass -File build.ps1
 ```
 
-Das Programm landet in `dist/DubPolice.exe`. Ohne Fenster:
+Das Programm landet im Ordner `dist/DubPolice`, fertig zum Weitergeben als `dist/DubPolice.zip`. Es wird als Ordner statt als einzelne Exe gebaut, weil Virenscanner sich selbst entpackende Exe-Dateien deutlich öfter melden. Ohne Fenster:
 
 ```bash
 python src/launcher.py --engine --game "<Remaster-Ordner>" --source "<alte Version>" --language french --episodes 101 102
@@ -105,6 +105,12 @@ Gemessen an 40 Zeilen aus Episode 301 liegen die alten Aufnahmen in Pegel und Ba
 1. **exact:** normalisierter Text eindeutig
 2. **same text:** Text mehrfach vorhanden, dann gleicher Sprecher und ähnlichste Dauer
 3. **close:** Textähnlichkeit ab 0,92, etwa korrigierte Tippfehler
+4. **dubbed text:** Der deutsche oder französische Untertitel des Remasters passt zum Text einer alten Aufnahme
+5. **similar:** letzter Ausweg bei gleichem Sprecher: eine unbenutzte Aufnahme, deren englischer Text mindestens 0,6 erreicht und die nächste deutlich schlägt; nur für Zeilen ab 12 Zeichen
+
+Aufnahmen von 0,25 s oder weniger sind im alten Spiel oft abgeschnitten. Hat derselbe Sprecher eine vollständige Aufnahme desselben synchronisierten Texts, wird diese verwendet (**whole take**). Zeilen werden auch im gemeinsamen `Common`-Archiv der Season gesucht, wo Standardantworten liegen.
+
+Jede Stimme bekommt am Ende 0,15 s Stille wie die englischen Aufnahmen; ohne sie schnitt das Spiel die letzten Buchstaben ab.
 
 Die Ergebnisse jedes Laufs landen im Arbeitsordner als `epNNN_lines.csv`.
 

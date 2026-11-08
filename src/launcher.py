@@ -16,6 +16,12 @@ def main():
                 print(stop.code, flush=True)
                 sys.exit(1)
             raise
+        except Exception:  # noqa: BLE001 - the window shows the log; a crash dialog would only block it
+            import traceback
+
+            traceback.print_exc()
+            sys.stdout.flush()
+            sys.exit(1)
     else:
         import gui
 

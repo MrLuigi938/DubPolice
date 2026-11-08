@@ -13,7 +13,7 @@ Ensuite :
 powershell -ExecutionPolicy Bypass -File build.ps1
 ```
 
-Le programme se trouve dans `dist/DubPolice.exe`. Sans fenêtre :
+Le programme se trouve dans le dossier `dist/DubPolice`, prêt à partager sous la forme `dist/DubPolice.zip`. Il est construit en dossier plutôt qu'en exe unique, car les antivirus signalent bien plus souvent les exe qui se décompressent eux-mêmes. Sans fenêtre :
 
 ```bash
 python src/launcher.py --engine --game "<dossier du remaster>" --source "<ancienne version>" --language french --episodes 101 102
@@ -105,6 +105,12 @@ Mesurés sur 40 répliques de l'épisode 301, les anciens enregistrements sont p
 1. **exact :** texte normalisé unique
 2. **same text :** plusieurs correspondances, puis même personnage et durée la plus proche
 3. **close :** similarité de texte d'au moins 0,92, par exemple des fautes corrigées
+4. **dubbed text :** le sous-titre français ou allemand du remaster correspond au texte d'un ancien enregistrement
+5. **similar :** dernier recours pour le même personnage : un enregistrement inutilisé dont le texte anglais atteint au moins 0,6 et devance nettement le suivant ; seulement pour les répliques d'au moins 12 caractères
+
+Les prises de 0,25 s ou moins sont souvent coupées dans l'ancien jeu. Si le même personnage a une prise complète du même texte doublé, elle est utilisée à la place (**whole take**). Les répliques sont aussi cherchées dans l'archive commune `Common` de la saison, où se trouvent les réponses standard.
+
+Chaque voix se termine par 0,15 s de silence, comme les enregistrements anglais ; sans cela, le jeu coupait les dernières lettres.
 
 Les résultats de chaque passage sont écrits dans le dossier de travail sous le nom `epNNN_lines.csv`.
 

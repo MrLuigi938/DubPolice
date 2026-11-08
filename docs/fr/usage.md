@@ -17,7 +17,7 @@ Sélectionnez le dossier principal de l'ancien jeu. Dub Police y cherche lui-mê
 ## Installation
 
 1. Fermez le jeu. Tant qu'il tourne, Dub Police ne lance pas la conversion.
-2. Lancez `DubPolice.exe`. Le premier démarrage peut prendre jusqu'à une demi-minute, le temps que Windows vérifie le nouveau fichier.
+2. Décompressez `DubPolice.zip` et lancez `DubPolice.exe`. Le dossier `_internal` doit rester à côté. Le premier démarrage peut prendre un moment, le temps que Windows vérifie les nouveaux fichiers.
 3. Choisissez la saison en haut à gauche et la langue en haut à droite. Toute la fenêtre change de langue.
 4. Vérifiez les deux chemins :
    - **Scène de crime** est votre remaster. Les jeux Steam sont trouvés automatiquement.

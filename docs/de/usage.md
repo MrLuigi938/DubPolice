@@ -17,7 +17,7 @@ Wähle den Hauptordner des alten Spiels. Dub Police sucht darin selbst nach den 
 ## Installieren
 
 1. Das Spiel schließen. Solange es läuft, startet Dub Police die Umwandlung nicht.
-2. `DubPolice.exe` starten. Der erste Start kann bis zu einer halben Minute dauern, weil Windows die neue Datei prüft.
+2. `DubPolice.zip` entpacken und `DubPolice.exe` starten. Der Ordner `_internal` muss daneben liegen bleiben. Der erste Start kann etwas dauern, weil Windows die neuen Dateien prüft.
 3. Oben links die Season und oben rechts die Sprache wählen. Das ganze Fenster wechselt mit.
 4. Die beiden Pfade prüfen:
    - **Tatort** ist dein Remaster. Steam-Spiele werden von selbst gefunden.

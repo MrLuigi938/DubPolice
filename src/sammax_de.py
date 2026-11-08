@@ -22,6 +22,7 @@ import struct
 import subprocess
 import sys
 import tempfile
+import time
 from difflib import SequenceMatcher
 
 # Inside the exe, bundled files are unpacked to a temporary folder.
@@ -87,6 +88,9 @@ SPEEX_DLL = os.path.join(BIN, "libspeex-1.dll")
 MANIFEST = "SamMax_GermanDub.json"
 LEGACY_FILES = ("SM2_pc_GermanVoiceTest_uncompressed.ttarch2", "_resdesc_50_GermanVoiceTest.lua")
 STEP = 0.002
+CLIPPED = 0.25
+SIMILAR = 0.6
+SIMILAR_MIN_CHARS = 12
 ACTIVE_FLAG = 2
 
 
@@ -221,6 +225,12 @@ def norm(s):
     return re.sub(r"[^a-z0-9]+", " ", s).strip()
 
 
+def dub_norm(s):
+    """Dubbed text for comparison: any letters, without stage directions."""
+    s = re.sub(r"\{[^}]*\}|\[[^\]]*\]", " ", s).replace("’", "'").lower()
+    return re.sub(r"[\W_]+", " ", s).strip()
+
+
 def voice_lengths(archive, names):
     out = {}
     for n in names:
@@ -283,29 +293,45 @@ def match_lines(season, e, paths, remaster, arch_dir, work, language):
     en_len = voice_lengths(voice_en, numeric(voice_en))
     dub_ids = {int(n[:-4]) for n in numeric(voice_dub)}
 
-    new_text = {}
+    new_text, new_dub = {}, {}
     for n in remaster.files:
         if n.endswith("_english.landb"):
             new_text.update(parse_new_lang(remaster.read(n)))
-    path = os.path.join(arch_dir, f"{season['prefix']}_pc_SamMax{e}_uncompressed.ttarch2")
-    _, wavs = read_nctt(path)
+        elif n.endswith(f"_{language}.landb"):
+            new_dub.update(parse_new_lang(remaster.read(n)))
     new_len = {}
-    with open(path, "rb") as f:
-        for n, (o, _s) in wavs.items():
-            if n[:-4].isdigit():
+    # Some lines are shared by all episodes and live in the Common archive.
+    for name in (f"SamMax{e}", "Common"):
+        path = os.path.join(arch_dir, f"{season['prefix']}_pc_{name}_uncompressed.ttarch2")
+        _, wavs = read_nctt(path)
+        with open(path, "rb") as f:
+            for n, (o, _s) in wavs.items():
+                if not n[:-4].isdigit():
+                    continue
+                rid = int(n[:-4])
+                if rid in new_len or (name == "Common" and rid not in new_text):
+                    continue
                 f.seek(o)
                 h = f.read(0x60)
                 word = struct.unpack_from("<Q", h, 0x3C)[0]
                 rate = {5: 22050, 7: 32000, 8: 44100, 9: 48000}.get((word >> 1) & 15, 44100)
-                new_len[int(n[:-4])] = (word >> 34) / rate
+                new_len[rid] = (word >> 34) / rate
 
     by_text = {}
     for i in en_len:
         if i in old_en:
             by_text.setdefault(norm(old_en[i][1]), []).append(i)
+    # Where the remaster rewrote the English, the dubbed text often stayed the same.
+    by_dub = {}
+    for i in dub_ids:
+        if i in old_dub:
+            by_dub.setdefault(dub_norm(old_dub[i][1]), []).append(i)
+    by_dub.pop("", None)
 
-    pairs, counts, rows = {}, {"same id": 0, "text changed": 0, "exact": 0, "same text": 0, "close": 0, "none": 0}, []
+    pairs, counts, rows = {}, {"same id": 0, "text changed": 0, "exact": 0, "same text": 0, "close": 0, "dubbed text": 0, "whole take": 0, "similar": 0, "none": 0}, []
     keys = list(by_text)
+    dub_keys = list(by_dub)
+    left = []
     for rid in sorted(new_len):
         speaker, text = new_text.get(rid, ("", ""))
         wanted = norm(text)
@@ -323,14 +349,65 @@ def match_lines(season, e, paths, remaster, arch_dir, work, language):
                 cands, kind = by_text[best], "close"
         cands = [c for c in cands if c in dub_ids]
         if not cands:
-            counts["none"] += 1
-            rows.append((rid, "", "none", speaker, text, ""))
+            dubbed = dub_norm(new_dub.get(rid, ("", ""))[1])
+            if dubbed:
+                cands = by_dub.get(dubbed, [])
+                if not cands:
+                    best = max(dub_keys, key=lambda k: SequenceMatcher(None, k, dubbed).quick_ratio(), default=None)
+                    if best and SequenceMatcher(None, best, dubbed).ratio() >= 0.9:
+                        cands = by_dub[best]
+                kind = "dubbed text"
+        if not cands:
+            left.append(rid)
             continue
-        same = [c for c in cands if old_en[c][0] == speaker] or cands
-        old = min(same, key=lambda c: abs(en_len[c] - new_len[rid]))
+        same = [c for c in cands if old_en.get(c, ("", ""))[0] == speaker] or cands
+        if len(same) > 1:
+            # Some old recordings were cut off at 0.24 s; take a whole one of the same line when there is one.
+            dub_len = voice_lengths(voice_dub, [f"{c}.vox" for c in same])
+            same = [c for c in same if dub_len[c] > CLIPPED] or same
+        else:
+            dub_len = {}
+        old = min(same, key=lambda c: abs(en_len.get(c, dub_len.get(c, 0.0)) - new_len[rid]))
+        if voice_lengths(voice_dub, [f"{old}.vox"])[old] <= CLIPPED:
+            # Cut off, and the English text has no other take: look for the same dubbed words by the same speaker.
+            spoken = dub_norm(old_dub.get(old, ("", ""))[1])
+            others = [c for c in by_dub.get(spoken, []) if c != old and old_en.get(c, ("", ""))[0] == old_en.get(old, ("", ""))[0]]
+            whole = {c: n for c, n in voice_lengths(voice_dub, [f"{c}.vox" for c in others]).items() if n > CLIPPED}
+            if whole:
+                old = min(whole, key=lambda c: abs(whole[c] - new_len[rid]))
+                kind = "whole take"
         pairs[rid] = old
         counts[kind] += 1
         rows.append((rid, old, kind, speaker, text, old_dub.get(old, ("", ""))[1]))
+
+    # Last resort for lines the remaster rewrote in every language: the clearly closest unused
+    # recording of the same speaker, whichever of its two texts is closer.
+    used = set(pairs.values())
+    for rid in left:
+        speaker, text = new_text.get(rid, ("", ""))
+        wanted, dubbed = norm(text), dub_norm(new_dub.get(rid, ("", ""))[1])
+        scored = []
+        if len(wanted) < SIMILAR_MIN_CHARS:
+            # Short lines look alike too easily ("Hey, Bosco." and "Hey, Stinky."); they stay English.
+            counts["none"] += 1
+            rows.append((rid, "", "none", speaker, text, ""))
+            continue
+        for c in dub_ids - used:
+            if not speaker or old_en.get(c, ("", ""))[0] != speaker:
+                continue
+            score = max(SequenceMatcher(None, norm(old_en[c][1]), wanted).ratio() if wanted else 0.0,
+                        SequenceMatcher(None, dub_norm(old_dub.get(c, ("", ""))[1]), dubbed).ratio() if dubbed else 0.0)
+            scored.append((score, c))
+        scored.sort(reverse=True)
+        if scored and scored[0][0] >= SIMILAR and (len(scored) < 2 or scored[0][0] - scored[1][0] >= 0.1):
+            old = scored[0][1]
+            pairs[rid] = old
+            used.add(old)
+            counts["similar"] += 1
+            rows.append((rid, old, "similar", speaker, text, old_dub.get(old, ("", ""))[1]))
+        else:
+            counts["none"] += 1
+            rows.append((rid, "", "none", speaker, text, ""))
     with open(os.path.join(work, f"ep{e}_lines.csv"), "w", newline="", encoding="utf-8-sig") as f:
         w = csv.writer(f, delimiter=";")
         w.writerow(["remaster_id", "old_id", "match", "speaker", "english", "old_text"])
@@ -356,7 +433,7 @@ def convert_voice(job):
     speex.close()
     if not pcm:
         return rid, None, "keine Audiodaten"
-    samples = enhance.enhance(pcm, v["rate"], enhance.DEESS if deess else False)
+    samples = enhance.pad_end(enhance.enhance(pcm, v["rate"], enhance.DEESS if deess else False))
     fsb, length = enhance.make_fsb5_mp3(str(rid), samples)
     return rid, fsb, length
 
@@ -391,14 +468,25 @@ def line_spans(d, hashes):
     return sorted((*struct.unpack_from("<ff", d, b), r) for r, _, b, _ in line_resources(d, hashes, blocks) if is_active(d, b))
 
 
+def room_ends(spans):
+    """Where each line's extra room has to be made: its end, or earlier where the next line already cuts in.
+
+    Making room before an interruption keeps the overlap as long as in the original instead of growing it."""
+    out = []
+    for s, e, rid in spans:
+        later = [s2 for s2, _e2, _r2 in spans if s2 > s + 0.001]
+        out.append((s, min([e] + later), e, rid))
+    return out
+
+
 def line_table(d, hashes, seconds):
     """Dialogs: the timeline slows down during a line that needs more room."""
     pairs = [(0.0, 0.0)]
     shift = 0.0
-    for s, e, rid in line_spans(d, hashes):
+    for s, end, e, rid in room_ends(line_spans(d, hashes)):
         pairs.append((s, s + shift))
         shift += max(0.0, seconds[rid] - (e - s)) if rid in seconds else 0.0
-        pairs.append((e, e + shift))
+        pairs.append((end, end + shift))
     return pairs_to_map(pairs)
 
 
@@ -447,11 +535,11 @@ def nested_time(points, old_length, at):
 def pause_events(d, hashes, seconds, kids):
     """Where a cutscene must stop, and for how long: its own lines plus everything its nested chores need."""
     events = []
-    for s, e, rid in line_spans(d, hashes):
+    for s, end, e, rid in room_ends(line_spans(d, hashes)):
         extra = seconds[rid] - (e - s) if rid in seconds else 0.0
         if extra > 0:
-            # Finished by the line's end: the next line may start within a millisecond of it.
-            events.append((e - STEP, extra))
+            # Finished by then: the next line may start within a millisecond of it.
+            events.append((max(s, end - STEP), extra))
     body, _, length = chore_info(d)
     blocks, _, _ = find_times(d, body, length)
     for name_crc, old_length, kid_events in kids:
@@ -609,11 +697,13 @@ def build_episode(season, e, paths, game, work, pool_size, deess, language):
                 progress(f"Stimmen {e}", i, len(jobs))
     progress(f"Stimmen {e}", len(jobs), len(jobs))
 
+    common = Ectt(os.path.join(arch_dir, f"{prefix}_pc_Common_compressed.ttarch2"), key)
     for rid, length in seconds.items():
         anm = f"{rid}.anm"
-        if anm in remaster.files:
+        source = remaster if anm in remaster.files else common if anm in common.files else None
+        if source:
             try:
-                files[anm] = patch(remaster.read(anm), length)[0]
+                files[anm] = patch(source.read(anm), length)[0]
             except (ValueError, struct.error) as err:
                 say(f"  Lippen-Datei {anm} unverändert: {err}")
 
@@ -624,13 +714,16 @@ def build_episode(season, e, paths, game, work, pool_size, deess, language):
             hashes.update(line_hashes(landb))
             add_borrowed_lines(landb, seconds)
     names = set(remaster.files) | set(read_nctt(os.path.join(arch_dir, f"{prefix}_pc_SamMax{e}_uncompressed.ttarch2"))[1])
-    common = Ectt(os.path.join(arch_dir, f"{prefix}_pc_Common_compressed.ttarch2"), key)
     names |= set(common.files) | set(read_nctt(os.path.join(arch_dir, f"{prefix}_pc_Common_uncompressed.ttarch2"))[1])
     crc = {struct.pack("<Q", crc64(n.lower().encode())): n.lower() for n in names if n.lower().endswith((".wav", ".chore", ".anm"))}
 
     wanted = re.compile(b"|".join(re.escape(h) for h, r in hashes.items() if r in seconds))
     chore_pattern = re.compile(b"|".join(re.escape(k) for k, v in crc.items() if v.endswith(".chore")))
     all_chores = {n.lower(): (n, remaster.read(n)) for n in remaster.files if n.endswith(".chore")}
+    # Shared chores play lines too; the episode archive comes first, so a changed copy overrides them here.
+    for n in common.files:
+        if n.endswith(".chore") and n.lower() not in all_chores:
+            all_chores[n.lower()] = (n, common.read(n))
     children = {}
     for low, (_n, d) in all_chores.items():
         body = chore_info(d)[0]
@@ -758,7 +851,15 @@ def write_atomic(path, data):
     temporary = path + ".tmp"
     with open(temporary, "wb") as f:
         f.write(data)
-    os.replace(temporary, path)
+    # A virus scanner or Steam can hold the old file for a moment; wait for it instead of giving up.
+    for attempt in range(40):
+        try:
+            os.replace(temporary, path)
+            return
+        except PermissionError:
+            if attempt == 39:
+                raise SystemExit(f"{os.path.basename(path)} ist gesperrt. Bitte das Spiel und Steam-Dateiprüfungen schließen und erneut versuchen.")
+            time.sleep(0.5)
 
 
 def episode_files(season, e, language):
