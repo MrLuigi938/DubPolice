@@ -17,9 +17,9 @@ HERE = getattr(sys, "_MEIPASS", os.path.dirname(os.path.abspath(__file__)))
 FROZEN = getattr(sys, "frozen", False)
 APP_DIR = os.path.dirname(sys.executable) if FROZEN else os.path.dirname(os.path.abspath(__file__))
 GAMES = {
-    1: {"folder": "Sam & Max Save the World", "exe": "SamMax100.exe", "first": "101"},
-    2: {"folder": "Sam & Max Beyond Time and Space", "exe": "SamMax200.exe", "first": "201"},
-    3: {"folder": "Sam & Max The Devil's Playhouse", "exe": "SamMax300.exe", "first": "301"},
+    1: {"folder": "Sam & Max Save the World", "exe": "SamMax100.exe", "first": "101", "data": "sammax{e}_{lang}.ttarch"},
+    2: {"folder": "Sam & Max Beyond Time and Space", "exe": "SamMax200.exe", "first": "201", "data": "1_sammax{e}_pc_data.ttarch"},
+    3: {"folder": "Sam & Max The Devil's Playhouse", "exe": "SamMax300.exe", "first": "301", "data": "1_sammax{e}_english_pc_data.ttarch"},
 }
 MANIFEST = "SamMax_GermanDub.json"
 SOURCE_FOLDERS = {"german": "Deutsch", "french": "Französisch"}
@@ -72,6 +72,19 @@ def local_source(season, language):
     return local if os.path.isdir(os.path.join(local, f"SamMax{GAMES[season]['first']}")) else ""
 
 
+def retro_source(game, season, language):
+    """The game folder itself, if Steam installed the original episodes in this language there (retro mode).
+
+    Like sammax_de.retro_source; kept here so the window starts without loading the converter."""
+    if not is_game(game, season):
+        return ""
+    name = GAMES[season]["data"].format(e=GAMES[season]["first"], lang=language)
+    for _root, _dirs, files in os.walk(os.path.join(game, f"ep{GAMES[season]['first']}")):
+        if name in (f.lower() for f in files):
+            return game
+    return ""
+
+
 def installed_episodes(game):
     """{episode: language}; installs from before the language choice were German."""
     try:
@@ -99,10 +112,13 @@ class Backend:
         self._window = window
 
     def initial_state(self):
-        return {
-            str(season): {"game": find_game(season), "sources": {language: local_source(season, language) for language in SOURCE_FOLDERS}}
-            for season in GAMES
-        }
+        state = {}
+        for season in GAMES:
+            game = find_game(season)
+            # The retro episodes in the game folder come first: no disc needed.
+            sources = {language: retro_source(game, season, language) or local_source(season, language) for language in SOURCE_FOLDERS}
+            state[str(season)] = {"game": game, "sources": sources}
+        return state
 
     def check(self, season, game, source):
         ok = is_game(game, season)

@@ -6,11 +6,13 @@ Dub Police reads the voices from your own copy of the old game, in the language 
 
 | Season | German | French |
 |---|---|---|
-| **1** Save the World (2007) | The installed folder | The installed folder |
+| **1** Save the World (2007) | The remaster itself, or the installed folder | The remaster itself, or the installed folder |
 | **2** Beyond Time and Space (2009) | The installed folder or the disc | The installed folder or the disc |
 | **3** The Devil's Playhouse (2010) | The installed folder | no French version exists |
 
 Select the main folder of the old game. Dub Police searches it for the right files, so you don't have to pick them one by one. The Season 2 disc already contains both languages. Mount an ISO and select its drive.
+
+**Season 1 without a disc:** for its retro mode, Steam installs the old episodes in the remaster's folder (`ep101` to `ep106`), in the language set for the game in Steam. Dub Police finds them by itself and fills in the field. They are byte for byte the same as on the old discs. Seasons 2 and 3 only come with the English retro episodes.
 
 **Tip:** Dub Police also looks for a folder named `Quelldaten` next to the program, sorted like `Quelldaten\Deutsch\Season 1` or `Quelldaten\Französisch\Season 2`. If it holds your data, the field fills in by itself.
 
@@ -42,7 +44,8 @@ Each episode holds one language at a time. Install an episode in the other langu
 ## Known limits
 
 - **Scenes pause briefly.** When a line is longer than the English one, the scene holds at the end of the sentence until it is finished. In normal conversations, the scene stretches slightly instead.
-- **Lips** are stretched English animations, not the old German or French ones.
+- **Lips:** in German, mouth shapes are worked out from the German text and the loudness of the recording, so they follow the words but are not hand-animated. French uses the English animations, stretched.
+- **Cut-off lines in Season 1:** about one recording in ten was already cut off in 2007, in German and French alike. In German, about 930 of them are repaired with a complete take or a completed ending from the same actor. The rest stay as they were, because nothing fit well enough. About 600 recordings were never dubbed in 2007 and stay in English, as in the old game.
 - **A few lines stay in English** because no old recording matches them: 40 in Season 1, 32 in Season 2 and 13 in Season 3 for German.
 - **Subtitles** come from the remaster and can differ slightly from the old recordings, because the remaster partly has new translations.
 - **Short excerpts.** Some scenes play only part of another scene, such as the visions of the future in Episode 301. The original does the same, so a sentence can end mid-excerpt there.

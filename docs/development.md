@@ -39,6 +39,9 @@ Game data never belongs in the repository, and `.gitignore` excludes it.
 | `src/ectt.py`, `src/nctt.py` | Reading the remaster's archives |
 | `src/vox2wav.py` | Decoding old recordings |
 | `src/enhance.py` | Sound clean-up, de-esser, MP3 inside FSB5 |
+| `src/repair.py` | Repairing cut-off takes |
+| `src/undubbed.py` | Season 1 takes left in English in 2007 |
+| `src/lipsync.py` | German mouth shapes |
 | `src/anm_patch.py` | Stretching lip files |
 | `src/chore_warp.py`, `src/chore_fit.py`, `src/port_schedule.py`, `src/curves.py` | Timing of scenes |
 | `src/keys.py` | Decryption keys for the game archives, from TTG Tools |
@@ -120,6 +123,27 @@ The results of each run are written to the work folder as `epNNN_lines.csv`.
 
 The length is a float at `20 + 12 × types + 16`. Times are in lists of `size, count` with 37-byte entries. Both are stretched proportionally.
 
+An entry is `time, flag 0x31, 01 00 00 00 1c 00 00 00, shape, ramp in, hold, ramp out, weight`. The shape is the CRC64 of its lower-case name (`aa`, `ee`, `fv`, `i`, `ll`, `mm`, `nn`, `o`, `sh`, `th`, `u`), which picks the character's `*_phoneme_*.anm`. Two sizes cover the list: the body size at byte 4 and a 24-bit size right after the length.
+
+### German mouth shapes (`src/lipsync.py`)
+
+For German, each line gets its own list instead of the stretched English one:
+
+1. Spelling rules turn the old recording's German text into shapes, such as `sch` to SH or `au` to AA then U.
+2. The recording's loudness per 1/30 s decides where they go: each shape takes a share of the loudness, vowels twice as much, so open vowels land on loud syllables.
+3. At most one shape every 0.1 s; where several crowd together, the clearest wins (vowels, then lips closing). Long ramps let the mouth glide.
+
+The old German `.anm` files of 2007 move bones of the old faces and are not used.
+
+## Cut-off takes (`src/repair.py`)
+
+About one take in ten of Season 1, German and French alike, ends while the voice is still loud. The 2007 German lip files have the same length, so the recordings were cut before they went into the game. A take counts as cut off when its last 20 ms are louder than 30 % of its average level. Then, using takes of any episode by the same speaker:
+
+1. **Whole take:** the same text in a take that ends properly.
+2. **Graft:** a take whose last word ends the same way. The donor's last word is searched for the spot that sounds most like the end of the cut take (log spectrum in 32 bands, 60 ms), its rest is level-matched and cross-faded in. At most 0.35 s are added, and grafts that fit poorly are not made.
+
+Takes that the 2007 releases left in English are the same file in German and French; `src/undubbed.py` lists them, and they never serve as a replacement.
+
 ## Chores (`.chore`)
 
 - **Time blocks:** `start, end, loop char, scale` (13 bytes).
@@ -147,5 +171,4 @@ Normal conversations stretch slightly during the line instead.
 ## Open questions
 
 - **Doubled words:** earlier versions sometimes repeated words in cutscenes, mostly at camera changes. The cause was never found. They have not been reported with the current pause method.
-- **Real lips:** the old `.anm` files are coded differently and aren't used yet.
 - **German chores from 2010:** Season 3 contains its own German chores, which might serve as a timing template. This has not been investigated.

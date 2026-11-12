@@ -6,11 +6,13 @@ Dub Police liest die Stimmen aus deiner eigenen Kopie des alten Spiels, in der g
 
 | Season | Deutsch | Französisch |
 |---|---|---|
-| **1** Save the World (2007) | Der installierte Ordner | Der installierte Ordner |
+| **1** Save the World (2007) | Das Remaster selbst oder der installierte Ordner | Das Remaster selbst oder der installierte Ordner |
 | **2** Beyond Time and Space (2009) | Der installierte Ordner oder die Disc | Der installierte Ordner oder die Disc |
 | **3** The Devil's Playhouse (2010) | Der installierte Ordner | keine französische Fassung vorhanden |
 
 Wähle den Hauptordner des alten Spiels. Dub Police sucht darin selbst nach den richtigen Dateien. Die Disc von Season 2 enthält bereits beide Sprachen. Eine ISO kannst du einbinden und ihr Laufwerk auswählen.
+
+**Season 1 ohne Disc:** Für den Retro-Modus installiert Steam die alten Episoden im Ordner des Remasters (`ep101` bis `ep106`), in der Sprache, die in Steam für das Spiel eingestellt ist. Dub Police findet sie selbst und füllt das Feld aus. Sie sind Byte für Byte dieselben wie auf den alten Discs. Season 2 und 3 bringen nur die englischen Retro-Episoden mit.
 
 **Tipp:** Dub Police sucht auch nach einem Ordner `Quelldaten` neben dem Programm, sortiert wie `Quelldaten\Deutsch\Season 1` oder `Quelldaten\Französisch\Season 2`. Liegen deine Daten dort, füllt sich das Feld von selbst.
 
@@ -42,7 +44,8 @@ Jede Episode hat immer nur eine Sprache. Installierst du eine Episode in der and
 ## Bekannte Grenzen
 
 - **Szenen halten kurz an.** Ist ein Satz länger als der englische, wartet die Szene am Satzende, bis er fertig ist. In normalen Gesprächen wird die Szene stattdessen leicht gestreckt.
-- **Lippen** sind gestreckte englische Animationen, nicht die alten deutschen oder französischen.
+- **Lippen:** Auf Deutsch werden die Mundformen aus dem deutschen Text und der Lautstärke der Aufnahme berechnet. Sie folgen den Worten, sind aber nicht von Hand animiert. Französisch nutzt die gestreckten englischen Animationen.
+- **Abgeschnittene Sätze in Season 1:** Etwa jede zehnte Aufnahme war schon 2007 abgeschnitten, auf Deutsch wie auf Französisch. Auf Deutsch werden rund 930 davon mit einer vollständigen Aufnahme oder einem ergänzten Ende desselben Sprechers repariert. Der Rest bleibt, wie er war, weil nichts gut genug passte. Etwa 600 Aufnahmen wurden 2007 nie synchronisiert und bleiben englisch, wie im alten Spiel.
 - **Einige Sätze bleiben englisch**, weil keine alte Aufnahme dazu passt: bei Deutsch 40 in Season 1, 32 in Season 2 und 13 in Season 3.
 - **Untertitel** kommen aus dem Remaster und können leicht von den alten Aufnahmen abweichen, weil das Remaster teils neue Übersetzungen hat.
 - **Kurze Ausschnitte.** Manche Szenen spielen nur einen Teil einer anderen ab, etwa die Zukunftsvisionen in Episode 301. Das macht auch das Original, dort kann ein Satz mitten im Ausschnitt enden.

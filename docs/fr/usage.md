@@ -6,11 +6,13 @@ Dub Police lit les voix dans votre propre copie de l'ancien jeu, dans la langue 
 
 | Saison | Français | Allemand |
 |---|---|---|
-| **1** Save the World (2007) | Le dossier installé | Le dossier installé |
+| **1** Save the World (2007) | Le remaster lui-même, ou le dossier installé | Le remaster lui-même, ou le dossier installé |
 | **2** Beyond Time and Space (2009) | Le dossier installé ou le disque | Le dossier installé ou le disque |
 | **3** The Devil's Playhouse (2010) | pas de version française | Le dossier installé |
 
 Sélectionnez le dossier principal de l'ancien jeu. Dub Police y cherche lui-même les bons fichiers. Le disque de la saison 2 contient déjà les deux langues. Vous pouvez monter une image ISO et sélectionner son lecteur.
+
+**Saison 1 sans disque :** pour son mode rétro, Steam installe les anciens épisodes dans le dossier du remaster (`ep101` à `ep106`), dans la langue choisie pour le jeu dans Steam. Dub Police les trouve tout seul et remplit le champ. Ils sont identiques, octet pour octet, à ceux des anciens disques. Les saisons 2 et 3 ne fournissent que les épisodes rétro anglais.
 
 **Astuce :** Dub Police cherche aussi un dossier `Quelldaten` à côté du programme, trié comme `Quelldaten\Französisch\Season 1` ou `Quelldaten\Deutsch\Season 2`. Si vos données s'y trouvent, le champ se remplit tout seul.
 
@@ -38,7 +40,8 @@ Chaque épisode n'a qu'une langue à la fois. Si vous installez un épisode dans
 ## Limites connues
 
 - **Les scènes marquent de courtes pauses.** Quand une phrase est plus longue que l'anglaise, la scène attend à la fin de la phrase. Dans les conversations normales, la scène s'étire légèrement à la place.
-- **Les lèvres** sont des animations anglaises étirées, pas les anciennes animations françaises ou allemandes.
+- **Les lèvres :** en allemand, les formes de bouche sont calculées à partir du texte allemand et du volume de l'enregistrement. Elles suivent les mots, mais ne sont pas animées à la main. Le français utilise les animations anglaises étirées.
+- **Phrases coupées dans la saison 1 :** environ un enregistrement sur dix était déjà coupé en 2007, en français comme en allemand. En allemand, environ 930 d’entre eux sont réparés avec une prise complète ou une fin complétée du même comédien. Les autres restent tels quels, faute de correspondance assez bonne. Environ 600 enregistrements n'ont jamais été doublés en 2007 et restent en anglais, comme dans l'ancien jeu.
 - **Quelques répliques restent en anglais**, faute d'ancien enregistrement correspondant.
 - **Les sous-titres** viennent du remaster et peuvent différer légèrement des anciens enregistrements, car le remaster a en partie de nouvelles traductions.
 - **Courts extraits.** Certaines scènes ne jouent qu'une partie d'une autre, comme les visions du futur de l'épisode 301. L'original fait de même, donc une phrase peut s'y arrêter en plein extrait.

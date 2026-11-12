@@ -39,6 +39,9 @@ Spieldaten gehören nie ins Repository, `.gitignore` schließt sie aus.
 | `src/ectt.py`, `src/nctt.py` | Archive des Remasters lesen |
 | `src/vox2wav.py` | Alte Aufnahmen dekodieren |
 | `src/enhance.py` | Klangbearbeitung, De-Esser, MP3 in FSB5 |
+| `src/repair.py` | Abgeschnittene Aufnahmen reparieren |
+| `src/undubbed.py` | Aufnahmen von Season 1, die 2007 englisch blieben |
+| `src/lipsync.py` | Deutsche Mundformen |
 | `src/anm_patch.py` | Lippen-Dateien strecken |
 | `src/chore_warp.py`, `src/chore_fit.py`, `src/port_schedule.py`, `src/curves.py` | Timing der Szenen |
 | `src/keys.py` | Schlüssel für die Spielarchive, aus den TTG Tools |
@@ -120,6 +123,27 @@ Die Ergebnisse jedes Laufs landen im Arbeitsordner als `epNNN_lines.csv`.
 
 Die Länge steht als Float bei `20 + 12 × Typen + 16`. Die Zeitpunkte stehen in Listen aus `Größe, Anzahl` und 37-Byte-Einträgen. Beides wird proportional gestreckt.
 
+Ein Eintrag ist `Zeit, Flag 0x31, 01 00 00 00 1c 00 00 00, Mundform, Einblenden, Halten, Ausblenden, Gewicht`. Die Mundform ist die CRC64 ihres kleingeschriebenen Namens (`aa`, `ee`, `fv`, `i`, `ll`, `mm`, `nn`, `o`, `sh`, `th`, `u`) und wählt die `*_phoneme_*.anm` der Figur. Zwei Größen umfassen die Liste: die Größe des Inhalts bei Byte 4 und eine 24-Bit-Größe direkt nach der Länge.
+
+### Deutsche Mundformen (`src/lipsync.py`)
+
+Auf Deutsch bekommt jeder Satz eine eigene Liste statt der gestreckten englischen:
+
+1. Schreibregeln machen aus dem deutschen Text der alten Aufnahme Mundformen, etwa `sch` zu SH oder `au` zu AA, dann U.
+2. Die Lautstärke der Aufnahme je 1/30 s bestimmt, wo sie liegen: Jede Mundform bekommt einen Anteil der Lautstärke, Vokale doppelt so viel, damit offene Vokale auf lauten Silben landen.
+3. Höchstens eine Mundform alle 0,1 s; drängen sich mehrere, gewinnt die deutlichste (Vokale, dann geschlossene Lippen). Lange Übergänge lassen den Mund gleiten.
+
+Die alten deutschen `.anm` von 2007 bewegen Knochen der alten Gesichter und werden nicht verwendet.
+
+## Abgeschnittene Aufnahmen (`src/repair.py`)
+
+Etwa jede zehnte Aufnahme von Season 1 endet, während die Stimme noch laut ist, auf Deutsch wie auf Französisch. Die deutschen Lippen-Dateien von 2007 sind genauso lang, die Aufnahmen waren also schon vor dem Einbau ins Spiel gekürzt. Als abgeschnitten gilt eine Aufnahme, wenn ihre letzten 20 ms lauter als 30 % ihres Durchschnitts sind. Dann, mit Aufnahmen aller Episoden desselben Sprechers:
+
+1. **Whole take:** derselbe Text in einer Aufnahme, die richtig endet.
+2. **Graft:** eine Aufnahme, deren letztes Wort gleich endet. Im letzten Wort des Spenders wird die Stelle gesucht, die dem Ende der abgeschnittenen Aufnahme am ähnlichsten klingt (Log-Spektrum in 32 Bändern, 60 ms). Der Rest wird in der Lautstärke angeglichen und übergeblendet. Höchstens 0,35 s kommen dazu, schlecht passende Ergänzungen entfallen.
+
+Aufnahmen, die 2007 englisch blieben, sind auf Deutsch und Französisch dieselbe Datei. `src/undubbed.py` listet sie auf, sie dienen nie als Ersatz.
+
 ## Choreografien (`.chore`)
 
 - **Zeitblöcke:** `Start, Ende, Loop-Zeichen, Skalierung` (13 Byte).
@@ -147,5 +171,4 @@ Normale Gespräche werden stattdessen während der Zeile leicht gestreckt.
 ## Offene Fragen
 
 - **Doppelte Wörter:** Frühere Versionen wiederholten in Zwischensequenzen manchmal Wörter, meist bei Kamerawechseln. Die Ursache wurde nie gefunden. Mit der aktuellen Pausen-Methode wurden sie nicht mehr gemeldet.
-- **Echte Lippen:** Die alten `.anm` sind anders kodiert und werden noch nicht genutzt.
 - **Deutsche Choreografien von 2010:** Season 3 enthält eigene deutsche Choreografien, die als Zeitvorlage taugen könnten. Das ist nicht untersucht.

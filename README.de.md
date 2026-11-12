@@ -5,7 +5,7 @@
 <h1 align="center">Dub Police</h1>
 
 <p align="center">
-  Die alten Sam-&amp;-Max-Spiele konnten Deutsch. Die Remaster sprechen nur noch Englisch. Dub Police holt die Originalaufnahmen aus deiner alten Version und bringt sie zurück. Echte Synchronsprecher, keine KI-Stimmen.
+  Die alten Sam-&amp;-Max-Spiele konnten Deutsch. Die Remaster sprechen nur noch Englisch. Dub Police holt die Originalaufnahmen zurück: bei Season 1 direkt aus dem Remaster, bei Season 2 und 3 aus deiner alten Version. Echte Synchronsprecher, keine KI-Stimmen.
 </p>
 
 <p align="center">
@@ -24,7 +24,8 @@
 - **Die Originalstimmen** – die Aufnahmen von damals, keine neue Synchronisation und keine KI.
 - **Alle drei Seasons** – Save the World, Beyond Time and Space und The Devil's Playhouse.
 - **Szenen warten auf den Satz** – deutsche und französische Sätze sind oft länger als englische. Die Szenen machen ihnen Platz, damit niemand dazwischenredet. Stimmen werden nie beschleunigt.
-- **Lippen und Timing ziehen mit** – die Mundbewegungen werden auf die Länge des neuen Satzes gestreckt.
+- **Lippen und Timing ziehen mit** – auf Deutsch folgen die Münder den deutschen Worten. Auf Französisch werden die englischen Mundbewegungen auf die Länge des neuen Satzes gestreckt.
+- **Abgeschnittene Sätze repariert** – in der Season 1 von 2007 hört etwa jede zehnte Aufnahme mitten im Wort auf. Dub Police nimmt eine vollständige Aufnahme desselben Satzes derselben Figur oder ergänzt das Ende aus der Stimme desselben Sprechers.
 - **Sauberer Klang** – die alten Aufnahmen werden behutsam ins heutige Format gebracht. Bei Deutsch mildert ein Schalter scharfe S-Laute ab.
 - **Dein Spiel bleibt unberührt** – Dub Police legt nur Dateien dazu. Ein Klick entfernt alles wieder.
 - **Einfach** – deine Steam-Spiele werden von selbst gefunden. Season, Sprache und Episoden wählen, fertig.
@@ -33,19 +34,29 @@
 
 | Season | Deutsch | Französisch |
 |---|---|---|
-| **1** Save the World | ✓ 11.422 von 11.433 Zeilen | ✓ 11.420 von 11.433 Zeilen |
+| **1** Save the World | ✓ 11.421 von 11.433 Zeilen | ✓ 11.420 von 11.433 Zeilen |
 | **2** Beyond Time and Space | ✓ 11.457 von 11.477 Zeilen | ✓ 11.457 von 11.477 Zeilen |
 | **3** The Devil's Playhouse | ✓ 10.204 von 10.217 Zeilen | – keine französische Fassung vorhanden |
 
 Die wenigen übrigen Zeilen haben keine passende alte Aufnahme und bleiben englisch.
 
+## Woher die alten Stimmen kommen
+
+| Season | Welche alte Version du brauchst |
+|---|---|
+| **1** Save the World | **Nichts zusätzlich.** Das Remaster bringt die alten Episoden von 2007 für seinen Retro-Modus mit, in der Sprache, die in Steam eingestellt ist. Dub Police findet sie selbst. Eine CD oder installierte alte Version geht weiterhin. |
+| **2** Beyond Time and Space | Deine alte Version: installierter Ordner oder Disc |
+| **3** The Devil's Playhouse | Deine alte Version: installierter Ordner |
+
+Für Season 2 und 3 bringen die Remaster die alten Episoden nur auf Englisch mit. Die deutschen und französischen Stimmen müssen dort aus deiner eigenen alten Version kommen.
+
 ## Schnellstart
 
-**Du brauchst:** Windows, ein Remaster auf Steam und **deine eigene alte Version** in der gewünschten Sprache. Sie ist nicht enthalten.
+**Du brauchst:** Windows und ein Remaster auf Steam. Für Season 2 und 3 außerdem **deine eigene alte Version** in der gewünschten Sprache. Sie ist nicht enthalten.
 
 1. `DubPolice.zip` von der [Release-Seite](https://github.com/MrLuigi938/DubPolice/releases/latest) laden, in einen beliebigen Ordner entpacken und das Spiel schließen.
 2. `DubPolice.exe` in diesem Ordner starten. Oben links die Season wählen, oben rechts die Sprache.
-3. Auf **Zeugen** klicken und deine alte Version auswählen: den installierten Ordner, bei Season 2 auch die Disc.
+3. **Zeugen** prüfen, also deine alte Version. Bei Season 1 ist das Feld meist schon gefüllt: Steam installiert die alten Episoden für den Retro-Modus mit dem Remaster, in der Sprache, die in Steam für das Spiel eingestellt ist. Sonst den installierten Ordner auswählen, bei Season 2 auch die Disc.
 4. Episoden wählen und **Stimmen installieren** klicken. Eine ganze Season dauert etwa 12 bis 23 Minuten und belegt 620 bis 810 MB.
 5. Im Spiel dieselbe Sprache einstellen. Fertig.
 

@@ -39,6 +39,9 @@ from chore_warp import chore_info, find_times, line_hashes  # noqa: E402
 from curves import TIME_PROPERTY, refine  # noqa: E402
 from ectt import Blowfish7, Ectt  # noqa: E402
 import enhance  # noqa: E402
+import lipsync  # noqa: E402
+import repair  # noqa: E402
+from undubbed import UNDUBBED  # noqa: E402
 from nctt import read_nctt  # noqa: E402
 from old_archive import FlatArchive, LooseVoices, OldArchive  # noqa: E402
 from port_schedule import apply_map, pairs_to_map, port  # noqa: E402
@@ -121,6 +124,19 @@ def find_7zip():
         if path and os.path.isfile(path):
             return path
     return None
+
+
+def retro_source(game, season, language):
+    """The remaster folder itself, if it holds the original episodes in this language (Steam's retro mode).
+
+    Steam installs them in `ep<number>` folders, in the language chosen for the game in Steam."""
+    first = season["episodes"][0]
+    name = season["files"]["data"].format(e=first, lang=language)
+    folder = os.path.join(game, f"ep{first}")
+    for _root, _dirs, files in os.walk(folder):
+        if name in (f.lower() for f in files):
+            return game
+    return ""
 
 
 def collect_source(season, source, work, episodes, language):
@@ -277,18 +293,28 @@ def old_texts(data, language):
     return english, dubbed
 
 
-def match_lines(season, e, paths, remaster, arch_dir, work, language):
-    """Pair each remaster voice with its old voice: by number where those stayed, else by English text."""
+def open_old(season, e, paths):
+    """(data archive, English voices, dubbed voices) of one old episode."""
     key = load_key(None, f"SM{e}")
     if season.get("flat"):
-        data = FlatArchive(paths["data"], key)
         # This release holds no English recordings; the dubbed lengths serve to tell equal texts apart.
-        voice_en = voice_dub = LooseVoices(os.path.dirname(paths["data"]), key)
-    else:
-        data = OldArchive(paths["data"], key)
-        voice_en = OldArchive(paths["voice_en"], key)
-        voice_dub = OldArchive(paths["voice_dub"], key)
+        voices = LooseVoices(os.path.dirname(paths["data"]), key)
+        return FlatArchive(paths["data"], key), voices, voices
+    return OldArchive(paths["data"], key), OldArchive(paths["voice_en"], key), OldArchive(paths["voice_dub"], key)
+
+
+def all_texts(data, voice_dub, language):
+    """English and dubbed texts; the 2010 release keeps the dubbed ones beside its dubbed voices."""
     old_en, old_dub = old_texts(data, language)
+    if not old_dub and voice_dub is not data:
+        old_dub = old_texts(voice_dub, language)[1]
+    return old_en, old_dub
+
+
+def match_lines(season, e, paths, remaster, arch_dir, work, language):
+    """Pair each remaster voice with its old voice: by number where those stayed, else by English text."""
+    data, voice_en, voice_dub = open_old(season, e, paths)
+    old_en, old_dub = all_texts(data, voice_dub, language)
     numeric = lambda a: [n for n in a.files if n.endswith(".vox") and n[:-4].isdigit()]
     en_len = voice_lengths(voice_en, numeric(voice_en))
     dub_ids = {int(n[:-4]) for n in numeric(voice_dub)}
@@ -414,28 +440,83 @@ def match_lines(season, e, paths, remaster, arch_dir, work, language):
         w.writerows(rows)
     say(f"Episode {e}: {len(new_len)} Sprachzeilen, {len(pairs)} zugeordnet.")
     print(f"DETAIL {e} {json.dumps(counts)}", flush=True)
-    return pairs, voice_dub
+    # Who speaks the old recording and what it says: for the mouth shapes and to repair cut-off takes.
+    spoken = {}
+    for row in rows:
+        text = row[5] or new_dub.get(row[0], ("", ""))[1]
+        if row[1] != "" and text:
+            spoken[row[0]] = (old_en.get(row[1], ("", ""))[0].upper(), text)
+    return pairs, voice_dub, spoken
+
+
+def voice_pool(season, sources, language):
+    """Every dubbed take of every episode at hand, to repair cut-off takes with.
+
+    Returns ([((episode, id), speaker, normalized text)], {episode: (season number, paths)})."""
+    takes, folders = [], {}
+    number = next(n for n, s in SEASONS.items() if s is season)
+    for e, paths in sources.items():
+        data, _voice_en, voice_dub = open_old(season, e, paths)
+        old_en, old_dub = all_texts(data, voice_dub, language)
+        english = UNDUBBED.get(e, frozenset()) if season.get("flat") else frozenset()
+        for n in voice_dub.files:
+            if n.lower().endswith(".vox") and n[:-4].isdigit():
+                old = int(n[:-4])
+                if old in old_dub and old not in english:
+                    takes.append(((e, old), old_en.get(old, old_dub[old])[0].upper(), dub_norm(old_dub[old][1])))
+        folders[e] = (number, paths)
+    return takes, folders
 
 
 # ---------------------------------------------------------------- voices (run in worker processes)
 
 
-def convert_voice(job):
-    rid, blob, deess = job
+_voice_folders = {}
+_voice_archives = {}
+
+
+def init_voices(folders):
+    _voice_folders.update(folders)
+
+
+def decode_pool_take(ref):
+    """Samples of a take from another episode of the same release (`ref` = (episode, id))."""
+    e, old = ref
+    if e not in _voice_archives:
+        number, paths = _voice_folders[e]
+        _voice_archives[e] = open_old(SEASONS[number], e, paths)[2]
     try:
-        v = parse_vox(blob)
-    except (ValueError, struct.error) as err:
-        return rid, None, str(err)
+        v = parse_vox(_voice_archives[e].read(f"{old}.vox"))
+    except (KeyError, ValueError, struct.error):
+        return None
+    return decode_packets(v)
+
+
+def decode_packets(v):
     speex = Speex(SPEEX_DLL, v["mode"])
     pcm = array.array("h")
     for p in v["packets"]:
         pcm.extend(speex.decode(p)[0])
     speex.close()
+    return pcm
+
+
+def convert_voice(job):
+    """Return (id, FSB5 file, seconds, loudness per 1/30 s for the mouth shapes, repair made)."""
+    rid, blob, deess, fix = job
+    try:
+        v = parse_vox(blob)
+    except (ValueError, struct.error) as err:
+        return rid, None, str(err), None, ""
+    pcm = decode_packets(v)
     if not pcm:
-        return rid, None, "keine Audiodaten"
+        return rid, None, "keine Audiodaten", None, ""
+    kind = ""
+    if fix:
+        pcm, kind = repair.repair(pcm, v["rate"], fix[0], fix[1], decode_pool_take)
     samples = enhance.pad_end(enhance.enhance(pcm, v["rate"], enhance.DEESS if deess else False))
     fsb, length = enhance.make_fsb5_mp3(str(rid), samples)
-    return rid, fsb, length
+    return rid, fsb, length, lipsync.loudness(pcm, v["rate"]), kind
 
 
 # ---------------------------------------------------------------- timing
@@ -677,35 +758,62 @@ def convert_chore(job):
 # ---------------------------------------------------------------- one episode
 
 
-def build_episode(season, e, paths, game, work, pool_size, deess, language):
+def build_episode(season, e, paths, game, work, pool_size, deess, language, pool=None):
     arch_dir = os.path.join(game, "Archives")
     key = load_key(None, season["key"])
     prefix = season["prefix"]
     remaster = Ectt(os.path.join(arch_dir, f"{prefix}_pc_SamMax{e}_compressed.ttarch2"), key)
-    pairs, voice_dub = match_lines(season, e, paths, remaster, arch_dir, work, language)
+    pairs, voice_dub, spoken = match_lines(season, e, paths, remaster, arch_dir, work, language)
 
-    jobs = [(rid, voice_dub.read(f"{old}.vox"), deess) for rid, old in pairs.items()]
-    files, seconds = {}, {}
-    with futures.ProcessPoolExecutor(pool_size) as pool:
-        for i, (rid, fsb, length) in enumerate(pool.map(convert_voice, jobs, chunksize=16)):
+    takes, folders = pool or ([], {})
+
+    def fix_for(rid, old):
+        if not takes or rid not in spoken:
+            return None
+        speaker, text = spoken[rid]
+        return repair.candidates(speaker, dub_norm(text), takes, (e, old))
+
+    jobs = [(rid, voice_dub.read(f"{old}.vox"), deess, fix_for(rid, old)) for rid, old in pairs.items()]
+    files, seconds, levels = {}, {}, {}
+    repaired = {"whole take": 0, "graft": 0}
+    with futures.ProcessPoolExecutor(pool_size, initializer=init_voices, initargs=(folders,)) as workers:
+        for i, (rid, fsb, length, level, kind) in enumerate(workers.map(convert_voice, jobs, chunksize=16)):
             if fsb is None:
                 say(f"  Zeile {rid} bleibt englisch: {length}")
                 continue
             files[f"{rid}.wav"] = fsb
             seconds[rid] = length
+            levels[rid] = level
+            if kind:
+                repaired[kind] += 1
             if i % 50 == 0:
                 progress(f"Stimmen {e}", i, len(jobs))
     progress(f"Stimmen {e}", len(jobs), len(jobs))
+    if takes:
+        say(f"Episode {e}: abgeschnittene Aufnahmen repariert: {repaired['whole take']} durch eine vollständige Aufnahme, {repaired['graft']} mit angesetztem Ende.")
 
     common = Ectt(os.path.join(arch_dir, f"{prefix}_pc_Common_compressed.ttarch2"), key)
+    # Mouth shapes from the dubbed text; the spelling rules are German, so other languages keep the stretched English.
+    lips = language == "german"
+    lips_made = 0
     for rid, length in seconds.items():
         anm = f"{rid}.anm"
         source = remaster if anm in remaster.files else common if anm in common.files else None
         if source:
+            template = source.read(anm)
+            if lips and rid in spoken:
+                try:
+                    files[anm] = lipsync.german_lips(template, spoken[rid][1], levels[rid], length)
+                    lips_made += 1
+                    continue
+                except (ValueError, struct.error):
+                    pass
             try:
-                files[anm] = patch(source.read(anm), length)[0]
+                files[anm] = patch(template, length)[0]
             except (ValueError, struct.error) as err:
                 say(f"  Lippen-Datei {anm} unverändert: {err}")
+    if lips:
+        say(f"Episode {e}: {lips_made} Lippen-Dateien mit deutschen Mundformen.")
 
     hashes = {}
     for n in remaster.files:
@@ -887,10 +995,13 @@ def main():
     if args.uninstall:
         say(f"Entfernt: {remove_files(args.game)} Dateien. Das Spiel ist wieder im Originalzustand.")
         return
-    if not args.source:
-        raise SystemExit("Bitte die alte Version angeben (--source).")
     if args.language not in season["languages"]:
         raise SystemExit(f"Für dieses Spiel gibt es diese Sprachen: {', '.join(season['languages'])}")
+    if not args.source:
+        args.source = retro_source(args.game, season, args.language)
+        if not args.source:
+            raise SystemExit("Bitte die alte Version angeben (--source). Im Spielordner liegen keine alten Episoden in dieser Sprache.")
+        say("Alte Version: die Retro-Episoden im Spielordner.")
     deess = args.language == "german" and not args.no_deess
 
     episodes = args.episodes or list(season["episodes"])
@@ -905,12 +1016,18 @@ def main():
     os.makedirs(work, exist_ok=True)
     try:
         sources = collect_source(season, args.source, work, episodes, args.language)
+        # Repairs may use takes from any episode, so all of them are gathered when they are there.
+        try:
+            every = collect_source(season, args.source, work, list(season["episodes"]), args.language)
+        except SystemExit:
+            every = sources
+        pool_of_takes = voice_pool(season, every, args.language)
         pool = max(1, (os.cpu_count() or 2) - 1)
         arch = os.path.join(args.game, "Archives")
         built, stats = {}, {}
         for e in episodes:
             say(f"=== Episode {e} ===")
-            archive, stats[e] = build_episode(season, e, sources[e], args.game, work, pool, deess, args.language)
+            archive, stats[e] = build_episode(season, e, sources[e], args.game, work, pool, deess, args.language, pool_of_takes)
             built[e] = archive
         say("Schreibe die Archive ins Spiel ...")
         # Only touch the game once every episode has been built; other episodes stay installed.

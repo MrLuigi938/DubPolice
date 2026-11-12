@@ -39,6 +39,9 @@ Les données de jeu n'ont pas leur place dans le dépôt, et `.gitignore` les ex
 | `src/ectt.py`, `src/nctt.py` | Lecture des archives du remaster |
 | `src/vox2wav.py` | Décodage des anciens enregistrements |
 | `src/enhance.py` | Traitement du son, de-esser, MP3 dans FSB5 |
+| `src/repair.py` | Réparation des prises coupées |
+| `src/undubbed.py` | Prises de la saison 1 restées en anglais en 2007 |
+| `src/lipsync.py` | Formes de bouche allemandes |
 | `src/anm_patch.py` | Étirement des fichiers de lèvres |
 | `src/chore_warp.py`, `src/chore_fit.py`, `src/port_schedule.py`, `src/curves.py` | Rythme des scènes |
 | `src/keys.py` | Clés de déchiffrement des archives du jeu, issues de TTG Tools |
@@ -120,6 +123,27 @@ Les résultats de chaque passage sont écrits dans le dossier de travail sous le
 
 La longueur est un flottant à `20 + 12 × types + 16`. Les instants se trouvent dans des listes `taille, nombre` avec des entrées de 37 octets. Les deux sont étirés proportionnellement.
 
+Une entrée vaut `temps, drapeau 0x31, 01 00 00 00 1c 00 00 00, forme, montée, maintien, descente, poids`. La forme est le CRC64 de son nom en minuscules (`aa`, `ee`, `fv`, `i`, `ll`, `mm`, `nn`, `o`, `sh`, `th`, `u`) et choisit le `*_phoneme_*.anm` du personnage. Deux tailles couvrent la liste : la taille du contenu à l'octet 4 et une taille sur 24 bits juste après la longueur.
+
+### Formes de bouche allemandes (`src/lipsync.py`)
+
+En allemand, chaque réplique reçoit sa propre liste au lieu de la liste anglaise étirée :
+
+1. Des règles d'orthographe transforment le texte allemand de l'ancien enregistrement en formes, par exemple `sch` en SH ou `au` en AA puis U.
+2. Le volume de l'enregistrement par 1/30 s décide de leur place : chaque forme reçoit une part du volume, les voyelles deux fois plus, pour que les voyelles ouvertes tombent sur les syllabes fortes.
+3. Une forme toutes les 0,1 s au plus ; quand plusieurs se bousculent, la plus nette l'emporte (voyelles, puis lèvres fermées). De longues transitions font glisser la bouche.
+
+Les anciens `.anm` allemands de 2007 déplacent les os des anciens visages et ne sont pas utilisés.
+
+## Prises coupées (`src/repair.py`)
+
+Environ une prise sur dix de la saison 1 s'arrête alors que la voix est encore forte, en français comme en allemand. Les fichiers de lèvres allemands de 2007 ont la même longueur : les enregistrements étaient donc coupés avant d'entrer dans le jeu. Une prise est considérée comme coupée quand ses 20 dernières ms dépassent 30 % de son niveau moyen. Alors, avec les prises de tous les épisodes du même personnage :
+
+1. **Whole take :** le même texte dans une prise qui se termine correctement.
+2. **Graft :** une prise dont le dernier mot se termine de la même façon. Dans le dernier mot du donneur, on cherche l'endroit qui ressemble le plus à la fin de la prise coupée (spectre logarithmique en 32 bandes, 60 ms). La suite est ajustée en volume et ajoutée en fondu. On ajoute au plus 0,35 s, et les greffes mal ajustées sont abandonnées.
+
+Les prises que les versions de 2007 ont laissées en anglais sont le même fichier en français et en allemand ; `src/undubbed.py` les liste, et elles ne servent jamais de remplacement.
+
 ## Chorégraphies (`.chore`)
 
 - **Blocs de temps :** `début, fin, caractère de boucle, échelle` (13 octets).
@@ -147,5 +171,4 @@ Les conversations normales s'étirent plutôt légèrement pendant la réplique.
 ## Questions ouvertes
 
 - **Mots doublés :** d'anciennes versions répétaient parfois des mots dans les cinématiques, surtout aux changements de caméra. La cause n'a jamais été trouvée. Ils n'ont plus été signalés avec la méthode de pauses actuelle.
-- **Vraies lèvres :** les anciens `.anm` sont codés autrement et ne sont pas encore utilisés.
 - **Chorégraphies allemandes de 2010 :** la saison 3 contient ses propres chorégraphies allemandes, qui pourraient servir de modèle de rythme. Cela n'a pas été étudié.
