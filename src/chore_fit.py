@@ -20,7 +20,8 @@ def line_resources(d, hashes, blocks):
     if key not in _patterns:
         _patterns.clear()
         _patterns[key] = re.compile(b"|".join(re.escape(h) for h in hashes))
-    hits = [(m.start(), hashes[m.group()]) for m in _patterns[key].finditer(d)]
+    # A name's position is 8 bytes before what follows it: the start of a hash, or the end of a plain-text name.
+    hits = [(m.end() - 8, hashes[m.group()]) for m in _patterns[key].finditer(d)]
     first = []
     for pos, rid in hits:
         if not first or first[-1][1] != rid:

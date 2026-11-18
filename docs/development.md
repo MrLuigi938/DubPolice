@@ -23,7 +23,7 @@ python src/launcher.py --engine --game "<remaster folder>" --source "<old versio
 python src/launcher.py --engine --game "<remaster folder>" --uninstall
 ```
 
-`--language` is `german` (default) or `french`. `--no-deess` keeps the S sounds in German as recorded.
+`--language` is `german` (default) or `french`. `--no-deess` keeps the S sounds in German as recorded. `--music-continuous` lets the music run on through dialog pauses. `--retro on` or `--retro off` only dubs the retro mode or makes it English again.
 
 Game data never belongs in the repository, and `.gitignore` excludes it.
 
@@ -41,9 +41,14 @@ Game data never belongs in the repository, and `.gitignore` excludes it.
 | `src/enhance.py` | Sound clean-up, de-esser, MP3 inside FSB5 |
 | `src/repair.py` | Repairing cut-off takes |
 | `src/undubbed.py` | Season 1 takes left in English in 2007 |
-| `src/lipsync.py` | German mouth shapes |
+| `src/lipsync.py` | German and French mouth shapes, gadgets, bone lips |
 | `src/anm_patch.py` | Stretching lip files |
 | `src/chore_warp.py`, `src/chore_fit.py`, `src/port_schedule.py`, `src/curves.py` | Timing of scenes |
+| `src/badge.py` | Badge on the main menu, BC3 textures |
+| `src/retro1.py` | Season 1 retro mode |
+| `src/retro.py` | Season 2 retro mode |
+| `src/retro3.py` | Season 3 retro mode: archive, dialogs, menu texts |
+| `src/chore_mtre.py` | Reading and adapting scenes of the Season 3 retro engine |
 | `src/keys.py` | Decryption keys for the game archives, from TTG Tools |
 | `assets/` | The logo as SVG and ICO |
 
@@ -66,6 +71,7 @@ The process depends only on the length and matching of recordings. A new languag
 | `.ttarch` version 2 | Number 2 at the start | Season 1 (2007), German and French | Blowfish table; metadata per block: every 32nd Blowfish, every 80th plain, the rest inverted |
 | `.ttarch` without version | Table size at the start | Season 1, English disc (not supported) | as version 2 |
 | `.ttarch` version 4 | Number 4 at the start | Season 2 (2009) | Blowfish table; zlib blocks |
+| `.ttarch` version 8 | Number 8 at the start | Season 3 retro mode (Steam) | Telltale's Blowfish variant or none; data partly obscured |
 | `.ttarch` version 9 | Number 9 at the start | Season 3 (2010) | Telltale's Blowfish variant; table and blocks partly compressed |
 | `.ttarch2` | `ECTT` | Remaster, compressed | Telltale's Blowfish variant, then Deflate in 64 KB blocks |
 | `.ttarch2` | `NCTT` | Remaster, raw | none |
@@ -168,7 +174,64 @@ Takes that the 2007 releases left in English are the same file in German and Fre
 
 Normal conversations stretch slightly during the line instead.
 
+## Badge on the main menu (`src/badge.py`)
+
+The logo on the main menu is a texture in the UI archive (`ui_logoSamMaxSaveTheWorld`, `ui_logoSamMaxBeyondTimeAndSpace`, `ui_logoSamMaxTheDevilsPlayhouse`): BC3 (DXT5), one level, 1024 × 1024 or 2048 × 1024. Dub Police decodes it, places the badge at the lower right of the lettering and encodes again only the 4×4 blocks the badge touches. All other blocks keep their original bytes. The badges are drawn once at their final size (fonts Bangers and Special Elite) and kept as RGBA in `src/ui/badges`.
+
+The changed logo goes into `<prefix>_pc_UI_DubPolice_uncompressed.ttarch2`. `_resdesc_51_UIDubPolice.lua` is a second description of the UI set with `descriptionPriority = 100` that lists this archive first, derived from `_resdesc_50_UI.lua` like the episodes'.
+
+## Season 1 retro mode (`src/retro1.py`)
+
+Steam puts two complete archives in each episode folder, `SamMax10x_english.ttarch` and the one in the game's language, each with its own chores. The game prefers the English one, so the dubbed voices play with English timing and get cut off. `--retro on` renames the English archive to `….ttarch.DubPolice`, `--retro off` and `--uninstall` rename it back. Nothing is deleted.
+
+## Retro mode
+
+`--retro on` dubs the remaster's original episodes, `--retro off` makes them English again. Which episodes are dubbed is kept under `retro` in `SamMax_GermanDub.json`. `--uninstall` restores them as well.
+
+### Season 2 (`src/retro.py`)
+
+- **Archive:** one flat archive per episode (`SamMax20x_english.ttarch`, version 2). Data files are obscured block by block after 4 marker bytes: `aadeaf64` (episode 205) with 0x100-byte blocks, every 8th Blowfish, the rest inverted; any other marker with 0x80-byte blocks, every 32nd Blowfish, every 80th raw, the rest inverted.
+- **Installing:** changed files are appended to the archive and the table points to them. The English table and the replaced voices are kept in `DubPolice_Retro`, so everything can be restored byte for byte.
+- **Texts:** `english.langdb` gets the old version's text. The engine shows nothing outside ASCII, so German umlauts are written out and accents are dropped.
+- **Scenes:** names are stored as plain text after their length, lines are called `<number>.langres`, time curves are called `time`. Scenes are adapted with the same pause logic as the remaster.
+
+### Season 3 (`src/retro3.py`, `src/chore_mtre.py`)
+
+**Archive.** Each episode loads every `.ttarch` in `ep30x\Pack`. Of two files with the same name, the archive that sorts first wins, like Telltale's patches `0_…` before the data `1_…`. Dub Police writes `0_0DubPolice.ttarch`: version 8, unencrypted, uncompressed, built like `0_8patch.ttarch` from episode 305, with the two build numbers from the episode's data archive. The files of episode 302 and some patches start with `aadeaf64` instead of `ERTM` and are obscured as in Season 2, with Telltale's Blowfish variant.
+
+**Dialogs (`.dlog`).** Subtitles are in a table: `size, count`, then per line `number, number, reference, lip name, voice name, block[size, 1, speaker, text, 8 bytes], 8 bytes`. An empty block is `8, 0`. 20 bytes before the table is an enclosing block whose size grows too. The voice is named after the line number; the `.vox` from the German version plays directly.
+
+**Scenes (`.chore`).** After `ERTM` and the type list (12 bytes per type) come name, length, number of tracks and agents. Each track is: `group, length, version, priority, flags, name, control animation, block list, 8 switches, properties, …`. The block list is `size, count` and per block `start, end, loop character, scale`.
+
+The control animation:
+
+```
+u32 size, u32 version (4|5), u32 flags, u64 name, u32 0, f32 0
+u32 inner size (= size − 28), u32 channels, u32 pool, u32 types
+per type: u64 type, u32 0, u16 channels of this type, u16 type version
+per channel its body, per channel u32 flags (high byte: 1 time, 2 weight, 4 mover, 5 property), u16 0
+per channel u64 name, u32 0
+```
+
+- **Key list:** `u16 count`, then per key `value, f32 time`, then 2 bits per key for the blend to the next: 0 step, 1 straight line, 3 smooth curve.
+- **Types:** number (4), on/off (1), vector (12) and rotation (16), as key list or single value; texts (`u32 length` + text) as key list or single value; two blocked strings (a reference to a scene) as key list or single value. One compressed type (`a4e0fd8b…`, 4 tracks) is not decoded. The channels before it are still moved in place.
+- **Pool:** per key list `4 + round_up4((value size + 4) × n) + 4 × ((n − 1) // 16)` bytes, texts with 4 bytes per key. The formula holds for all 161,406 control animations. A pool that is too small makes the game crash while loading.
+- **Nested scenes:** the time channel counts in shares of the inner length. That length is stored once more before the track's name.
+
+**Pauses.** The pauses come from the same calculation as for the remaster. Every time after a pause moves by its length. Channels that step or run in straight lines get two hold keys. Smooth curves are only moved, as their formula is unknown. Line tracks are stretched to the new length. Volume channels of sounds go to 0 during pauses. Nested scenes are adapted first; the outer scene pauses with them without stopping the inner time.
+
+**Checks.** In all 12,454 scenes the number of tracks found matches the header, and every scene is written back byte for byte identical when nothing changes. After adapting, it is checked that every German line fits, every pause stands still, values match the original and the pools are right.
+
+**What testing taught:**
+
+1. **Only exact reading works.** Heuristic searches for key lists hit the wrong bytes and broke the scenes further.
+2. **The pool has to be right,** or the game crashes when a new game starts.
+3. **Respect the blend type.** A hold key in the middle of a step moved the camera into empty space.
+4. **Find every track.** Empty control animations and unknown types left tracks out, which then ran on the old timing. Scenes overlapped.
+5. **Do not skip unknown channels entirely.** The narrator's visibility sat before a compressed channel and still had to move.
+
 ## Open questions
 
 - **Doubled words:** earlier versions sometimes repeated words in cutscenes, mostly at camera changes. The cause was never found. They have not been reported with the current pause method.
-- **German chores from 2010:** Season 3 contains its own German chores, which might serve as a timing template. This has not been investigated.
+- **German chores from 2010:** investigated. Telltale only adapted 5 Season 3 scenes to the German lines back then, stretching every time in the scene. They are no template, but confirmed which values are times.
+- **Compressed channel of the Season 3 retro** (`a4e0fd8b…`), probably facial expressions: not decoded yet.

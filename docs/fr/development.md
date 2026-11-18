@@ -23,7 +23,7 @@ python src/launcher.py --engine --game "<dossier du remaster>" --source "<ancien
 python src/launcher.py --engine --game "<dossier du remaster>" --uninstall
 ```
 
-`--language` vaut `german` (par défaut) ou `french`. En allemand, `--no-deess` conserve les « s » tels qu'enregistrés.
+`--language` vaut `german` (par défaut) ou `french`. En allemand, `--no-deess` conserve les « s » tels qu'enregistrés. `--music-continuous` laisse la musique continuer pendant les pauses. `--retro on` ou `--retro off` double seulement le mode rétro ou le remet en anglais.
 
 Les données de jeu n'ont pas leur place dans le dépôt, et `.gitignore` les exclut.
 
@@ -41,9 +41,14 @@ Les données de jeu n'ont pas leur place dans le dépôt, et `.gitignore` les ex
 | `src/enhance.py` | Traitement du son, de-esser, MP3 dans FSB5 |
 | `src/repair.py` | Réparation des prises coupées |
 | `src/undubbed.py` | Prises de la saison 1 restées en anglais en 2007 |
-| `src/lipsync.py` | Formes de bouche allemandes |
+| `src/lipsync.py` | Formes de bouche allemandes et françaises, appareils, lèvres animées par os |
 | `src/anm_patch.py` | Étirement des fichiers de lèvres |
 | `src/chore_warp.py`, `src/chore_fit.py`, `src/port_schedule.py`, `src/curves.py` | Rythme des scènes |
+| `src/badge.py` | Badge du menu principal, textures BC3 |
+| `src/retro1.py` | Mode rétro de la saison 1 |
+| `src/retro.py` | Mode rétro de la saison 2 |
+| `src/retro3.py` | Mode rétro de la saison 3 : archive, dialogues, textes des menus |
+| `src/chore_mtre.py` | Lire et adapter les scènes du moteur rétro de la saison 3 |
 | `src/keys.py` | Clés de déchiffrement des archives du jeu, issues de TTG Tools |
 | `assets/` | Le logo en SVG et ICO |
 
@@ -66,6 +71,7 @@ Le processus ne dépend que de la longueur et de l'association des enregistremen
 | `.ttarch` version 2 | Nombre 2 au début | Saison 1 (2007), français et allemand | Table Blowfish ; métadonnées par bloc : un sur 32 en Blowfish, un sur 80 en clair, le reste inversé |
 | `.ttarch` sans version | Taille de la table au début | Saison 1, disque anglais (non pris en charge) | comme la version 2 |
 | `.ttarch` version 4 | Nombre 4 au début | Saison 2 (2009) | Table Blowfish ; blocs zlib |
+| `.ttarch` version 8 | Nombre 8 au début | Mode rétro de la saison 3 (Steam) | Variante Blowfish de Telltale ou aucune ; données en partie masquées |
 | `.ttarch` version 9 | Nombre 9 au début | Saison 3 (2010) | Variante Blowfish de Telltale ; table et blocs en partie compressés |
 | `.ttarch2` | `ECTT` | Remaster, compressé | Variante Blowfish de Telltale, puis Deflate par blocs de 64 Ko |
 | `.ttarch2` | `NCTT` | Remaster, brut | aucun |
@@ -168,7 +174,64 @@ Les prises que les versions de 2007 ont laissées en anglais sont le même fichi
 
 Les conversations normales s'étirent plutôt légèrement pendant la réplique.
 
+## Badge du menu principal (`src/badge.py`)
+
+Le logo du menu principal est une texture de l'archive UI (`ui_logoSamMaxSaveTheWorld`, `ui_logoSamMaxBeyondTimeAndSpace`, `ui_logoSamMaxTheDevilsPlayhouse`) : BC3 (DXT5), un seul niveau, 1024 × 1024 ou 2048 × 1024. Dub Police la décode, place le badge en bas à droite du titre et ne réencode que les blocs 4×4 touchés par le badge. Tous les autres blocs gardent leurs octets d'origine. Les badges sont dessinés une fois à leur taille finale (polices Bangers et Special Elite) et rangés en RGBA dans `src/ui/badges`.
+
+Le logo modifié va dans `<préfixe>_pc_UI_DubPolice_uncompressed.ttarch2`. `_resdesc_51_UIDubPolice.lua` est une seconde description de l'ensemble UI avec `descriptionPriority = 100`, qui cite cette archive en premier, dérivée de `_resdesc_50_UI.lua` comme pour les épisodes.
+
+## Mode rétro de la saison 1 (`src/retro1.py`)
+
+Steam place deux archives complètes dans chaque dossier d'épisode, `SamMax10x_english.ttarch` et celle dans la langue du jeu, chacune avec ses chorégraphies. Le jeu préfère l'anglaise : les voix doublées sont alors jouées avec le minutage anglais et coupées. `--retro on` renomme l'archive anglaise en `….ttarch.DubPolice`, `--retro off` et `--uninstall` la renomment à nouveau. Rien n'est supprimé.
+
+## Mode rétro
+
+`--retro on` double les épisodes d'origine du remaster, `--retro off` les remet en anglais. Les épisodes doublés sont notés sous `retro` dans `SamMax_GermanDub.json`. `--uninstall` les restaure aussi.
+
+### Saison 2 (`src/retro.py`)
+
+- **Archive :** une archive plate par épisode (`SamMax20x_english.ttarch`, version 2). Les fichiers de données sont masqués bloc par bloc après 4 octets de marque : `aadeaf64` (épisode 205) avec des blocs de 0x100 octets, un sur 8 en Blowfish, le reste inversé ; toute autre marque avec des blocs de 0x80 octets, un sur 32 en Blowfish, un sur 80 brut, le reste inversé.
+- **Installation :** les fichiers modifiés sont ajoutés à la fin de l'archive et la table pointe vers eux. La table anglaise et les voix remplacées restent dans `DubPolice_Retro`, pour tout restaurer à l'octet près.
+- **Textes :** `english.langdb` reçoit le texte de l'ancienne version. Le moteur n'affiche rien hors ASCII : les trémas allemands sont écrits en toutes lettres et les accents retirés.
+- **Scènes :** les noms sont en clair après leur longueur, les répliques s'appellent `<numéro>.langres`, les courbes de temps `time`. Les scènes sont adaptées avec la même logique de pauses que le remaster.
+
+### Saison 3 (`src/retro3.py`, `src/chore_mtre.py`)
+
+**Archive.** Chaque épisode charge tous les `.ttarch` de `ep30x\Pack`. De deux fichiers de même nom, l'archive qui vient en premier dans l'ordre alphabétique l'emporte, comme les correctifs de Telltale `0_…` avant les données `1_…`. Dub Police écrit `0_0DubPolice.ttarch` : version 8, sans chiffrement ni compression, construite comme `0_8patch.ttarch` de l'épisode 305, avec les deux numéros de build de l'archive de données de l'épisode. Les fichiers de l'épisode 302 et quelques correctifs commencent par `aadeaf64` au lieu de `ERTM` et sont masqués comme dans la saison 2, avec la variante Blowfish de Telltale.
+
+**Dialogues (`.dlog`).** Les sous-titres sont dans une table : `taille, nombre`, puis par réplique `numéro, numéro, renvoi, nom des lèvres, nom de la voix, bloc[taille, 1, personnage, texte, 8 octets], 8 octets`. Un bloc vide est `8, 0`. 20 octets avant la table se trouve un bloc englobant dont la taille grandit aussi. La voix porte le numéro de la réplique ; le `.vox` de la version allemande est lu directement.
+
+**Scènes (`.chore`).** Après `ERTM` et la liste des types (12 octets par type) viennent le nom, la longueur, le nombre de pistes et d'agents. Chaque piste est : `groupe, longueur, version, priorité, drapeaux, nom, animation de contrôle, liste de blocs, 8 interrupteurs, propriétés, …`. La liste de blocs est `taille, nombre` puis par bloc `début, fin, caractère de boucle, échelle`.
+
+L'animation de contrôle :
+
+```
+u32 taille, u32 version (4|5), u32 drapeaux, u64 nom, u32 0, f32 0
+u32 taille intérieure (= taille − 28), u32 canaux, u32 pool, u32 types
+par type : u64 type, u32 0, u16 canaux de ce type, u16 version du type
+par canal son contenu, par canal u32 drapeaux (octet haut : 1 temps, 2 poids, 4 mouvement, 5 propriété), u16 0
+par canal u64 nom, u32 0
+```
+
+- **Liste de clés :** `u16 nombre`, puis par clé `valeur, f32 temps`, puis 2 bits par clé pour le passage à la suivante : 0 saut, 1 ligne droite, 3 courbe douce.
+- **Types :** nombre (4), oui/non (1), vecteur (12) et rotation (16), en liste de clés ou valeur unique ; textes (`u32 longueur` + texte) en liste ou valeur unique ; deux chaînes en bloc (renvoi vers une scène) en liste ou valeur unique. Un type compressé (`a4e0fd8b…`, 4 pistes) n'est pas décodé. Les canaux qui le précèdent sont quand même décalés sur place.
+- **Pool :** par liste de clés `4 + arrondi4((taille de valeur + 4) × n) + 4 × ((n − 1) // 16)` octets, 4 octets par clé pour les textes. La formule est vraie pour les 161 406 animations de contrôle. Un pool trop petit fait planter le jeu au chargement.
+- **Scènes imbriquées :** le canal de temps compte en parts de la longueur intérieure. Cette longueur figure une seconde fois avant le nom de la piste.
+
+**Pauses.** Les pauses viennent du même calcul que pour le remaster. Chaque instant après une pause recule de sa durée. Les canaux en saut ou en ligne droite reçoivent deux clés de maintien. Les courbes douces sont seulement décalées, faute d'en connaître la formule. Les pistes de réplique sont étirées à leur nouvelle longueur. Les canaux de volume des sons passent à 0 pendant les pauses. Les scènes imbriquées sont adaptées en premier ; la scène extérieure marque leurs pauses sans arrêter leur temps intérieur.
+
+**Contrôles.** Dans les 12 454 scènes, le nombre de pistes trouvées correspond à l'en-tête, et chaque scène est réécrite à l'identique, octet par octet, quand rien ne change. Après l'adaptation, on vérifie que chaque réplique allemande tient, que chaque pause est immobile, que les valeurs correspondent à l'original et que les pools sont justes.
+
+**Ce que les tests ont appris :**
+
+1. **Seule une lecture exacte fonctionne.** Des recherches heuristiques de listes de clés touchaient les mauvais octets et abîmaient encore plus les scènes.
+2. **Le pool doit être juste,** sinon le jeu plante au début d'une nouvelle partie.
+3. **Respecter le type de passage.** Une clé de maintien au milieu d'un saut envoyait la caméra dans le vide.
+4. **Trouver toutes les pistes.** Des animations de contrôle vides et des types inconnus faisaient oublier des pistes, qui gardaient alors l'ancien minutage. Les scènes se chevauchaient.
+5. **Ne pas ignorer entièrement les canaux inconnus.** La visibilité du narrateur se trouvait avant un canal compressé et devait quand même se décaler.
+
 ## Questions ouvertes
 
 - **Mots doublés :** d'anciennes versions répétaient parfois des mots dans les cinématiques, surtout aux changements de caméra. La cause n'a jamais été trouvée. Ils n'ont plus été signalés avec la méthode de pauses actuelle.
-- **Chorégraphies allemandes de 2010 :** la saison 3 contient ses propres chorégraphies allemandes, qui pourraient servir de modèle de rythme. Cela n'a pas été étudié.
+- **Chorégraphies allemandes de 2010 :** étudiées. Telltale n'avait adapté que 5 scènes de la saison 3 aux répliques allemandes, en étirant tous les instants de la scène. Elles ne servent pas de modèle, mais ont confirmé quelles valeurs sont des instants.
+- **Canal compressé du mode rétro de la saison 3** (`a4e0fd8b…`), probablement les expressions : pas encore décodé.

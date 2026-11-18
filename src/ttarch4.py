@@ -74,6 +74,14 @@ class Blowfish:
         l ^= self.P[0]
         return l, r
 
+    def encrypt(self, data, fmt):
+        out = bytearray(data)
+        for o in range(0, len(data) - len(data) % 8, 8):
+            l, r = struct.unpack_from(fmt, data, o)
+            l, r = self._enc(l, r)
+            struct.pack_into(fmt, out, o, l, r)
+        return bytes(out)
+
     def decrypt(self, data, fmt):
         out = bytearray(data)
         for o in range(0, len(data) - len(data) % 8, 8):

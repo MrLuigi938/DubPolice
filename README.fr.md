@@ -5,7 +5,7 @@
 <h1 align="center">Dub Police</h1>
 
 <p align="center">
-  Les anciens jeux Sam &amp; Max parlaient français et allemand. Les remasters ne parlent plus qu'anglais. Dub Police ramène les enregistrements d'origine : pour la saison 1 directement depuis le remaster, pour les saisons 2 et 3 depuis votre ancienne version. De vrais comédiens de doublage, aucune voix d'IA.
+  Les anciens jeux Sam &amp; Max parlaient français et allemand. Les remasters ne parlent plus qu'anglais, tout comme les épisodes d'origine de leur mode rétro. Dub Police ramène les enregistrements d'origine : pour la saison 1 directement depuis le remaster, pour les saisons 2 et 3 depuis votre ancienne version. De vrais comédiens de doublage, aucune voix d'IA.
 </p>
 
 <p align="center">
@@ -19,12 +19,17 @@
 ![La fenêtre de Dub Police](docs/images/window-fr.png)
 <p align="center"><sub>Capture d'écran avec des dossiers d'exemple</sub></p>
 
+> **Nouveau dans la 2.0 :** le mode rétro reparle aussi : la saison 1 sans voix hachées, la saison 2 en français et en allemand, la saison 3 en allemand avec ses menus. Pour la saison 3, le format des scènes du moteur de 2010 a été décodé. Un badge dans le menu principal montre que Dub Police est actif. Tous les détails dans les [notes de version](docs/release-notes/2.0.0.fr.md).
+
 ## Points forts
 
 - **Les voix d'origine** – les enregistrements de l'époque, ni nouveau doublage ni IA.
 - **Les trois saisons** – Save the World, Beyond Time and Space et The Devil's Playhouse (cette dernière uniquement en allemand).
+- **Le mode rétro aussi** – les épisodes d'origine que Steam installe avec les remasters parlent français ou allemand pour la saison 2, allemand pour la saison 3. Une case à cocher suffit.
 - **Les scènes attendent la fin de la phrase** – les phrases françaises et allemandes sont souvent plus longues que les anglaises. Les scènes leur laissent la place, pour que personne ne coupe la parole. Les voix ne sont jamais accélérées.
-- **Lèvres et rythme suivent** – en allemand, les bouches suivent les mots allemands. En français, les mouvements de bouche anglais sont étirés à la longueur de la nouvelle phrase.
+- **Lèvres et rythme suivent** – les bouches suivent les mots français ou allemands. Les appareils qui parlent et les personnages animés par os bougent au rythme de la nouvelle longueur.
+- **Un badge dans le menu principal** – un autocollant Dub Police sur le logo du jeu affiche « Français activé – bon jeu ! », pour voir tout de suite que tout est prêt.
+- **Une musique en douceur** – quand une cinématique attend une réplique plus longue, la musique s'estompe puis revient. Si vous préférez, elle continue simplement.
 - **Phrases coupées réparées** – dans la saison 1 de 2007, environ un enregistrement sur dix s'arrête au milieu d'un mot. Dub Police utilise une prise complète de la même réplique par le même personnage, ou complète la fin avec la voix du même comédien.
 - **Un son propre** – les anciens enregistrements sont soigneusement convertis au format actuel.
 - **Votre jeu reste intact** – Dub Police ne fait qu'ajouter des fichiers. Un clic retire tout.
@@ -39,6 +44,16 @@
 | **3** The Devil's Playhouse | – pas de version française | ✓ 10 204 répliques sur 10 217 |
 
 Les rares répliques restantes n'ont pas d'enregistrement ancien correspondant et restent en anglais.
+
+**Mode rétro** (les épisodes d'origine dans le remaster) :
+
+| Saison | Français | Allemand |
+|---|---|---|
+| **1** Save the World | ✓ réparé | ✓ réparé : plus de voix hachées |
+| **2** Beyond Time and Space | ✓ avec scènes adaptées | ✓ avec scènes adaptées |
+| **3** The Devil's Playhouse | – pas de version française | ✓ avec scènes adaptées |
+
+Pour la saison 1, Steam fournit déjà les épisodes d'origine dans votre langue, mais les joue avec le minutage anglais. La case **Réparer la version rétro** passe aux scènes correspondantes.
 
 ## D'où viennent les anciennes voix
 
@@ -58,6 +73,7 @@ Pour les saisons 2 et 3, les remasters ne contiennent les anciens épisodes qu'e
 2. Lancez `DubPolice.exe` dans ce dossier. Choisissez la saison en haut à gauche et la langue en haut à droite (**Français**).
 3. Vérifiez **Témoins**, votre ancienne version. Pour la saison 1, le champ est souvent déjà rempli : Steam installe les anciens épisodes avec le remaster pour son mode rétro, dans la langue choisie pour le jeu dans Steam. Sinon, sélectionnez le dossier installé ou, pour la saison 2, aussi le disque.
 4. Choisissez les épisodes et cliquez sur **Installer les voix**. Une saison complète prend environ 12 à 23 minutes et occupe 620 à 810 Mo.
+   Pour le mode rétro de la saison 2 ou 3, cochez aussi **Doubler aussi la version rétro**.
 5. Réglez le jeu sur la même langue. Terminé.
 
 ## Documentation
@@ -66,6 +82,7 @@ Pour les saisons 2 et 3, les remasters ne contiennent les anciens épisodes qu'e
 |---|---|
 | [Utilisation](docs/fr/usage.md) | Quelle ancienne version il vous faut, changer de langue, tout retirer, limites connues, dépannage |
 | [Développement](docs/fr/development.md) | Compiler depuis les sources, fonctionnement, formats de fichiers |
+| [Notes de version 2.0](docs/release-notes/2.0.0.fr.md) | Les nouveautés et comment le mode rétro de la saison 3 est devenu possible |
 
 ## Bon à savoir
 
@@ -73,7 +90,7 @@ Dub Police est un projet de fan non officiel, sans lien avec Skunkape Games, Tel
 
 ## Remerciements
 
-Une partie des connaissances sur les formats vient des [TTG Tools](https://github.com/HeitorSpectre/TTG-Tools), un projet open source. Dub Police utilise [Speex](https://speex.org), [LAME](https://lame.sourceforge.io) via [lameenc](https://github.com/chrisstaite/lameenc), [NumPy](https://numpy.org), [7-Zip](https://www.7-zip.org) et [pywebview](https://pywebview.flowrl.com), ainsi que les polices Bangers et Special Elite. Leurs licences se trouvent dans [licenses/](licenses).
+Une partie des connaissances sur les formats vient des [TTG Tools](https://github.com/HeitorSpectre/TTG-Tools), un projet open source. La description de format de [telltale-explorer](https://github.com/coccofresco/telltale-explorer) a servi de point de départ pour décoder les scènes du moteur rétro de la saison 3. Dub Police utilise [Speex](https://speex.org), [LAME](https://lame.sourceforge.io) via [lameenc](https://github.com/chrisstaite/lameenc), [NumPy](https://numpy.org), [7-Zip](https://www.7-zip.org) et [pywebview](https://pywebview.flowrl.com), ainsi que les polices Bangers et Special Elite. Leurs licences se trouvent dans [licenses/](licenses).
 
 ## Licence
 

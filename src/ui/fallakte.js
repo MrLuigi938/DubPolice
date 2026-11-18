@@ -11,6 +11,16 @@ const TEXT = {
     episodes: "Episoden", installed: "installiert",
     deess: "Scharfe S-Laute abmildern",
     deessHint: "Dämpft scharfe S-Laute der alten Aufnahmen. Ausgeschaltet bleiben sie wie im Original.",
+    music: "Musik in Dialogpausen ausblenden",
+    musicHint: "Wo die deutschen Sätze länger sind, wartet die Zwischensequenz. Die Musik blendet dann kurz aus und wieder ein. Ausgeschaltet läuft sie durch, kann aber vor der Szene fertig sein.",
+    retro: "Retro-Version auch vertonen",
+    retroHint: "Die Original-Episoden im Retro-Modus bekommen die alten Stimmen und Texte. Ausschalten macht sie wieder englisch.",
+    retro1: "Retro-Version reparieren",
+    retro1Hint: "Steam liefert die Original-Episoden schon auf Deutsch, spielt sie aber mit dem englischen Timing ab, deshalb klingen die Stimmen abgehackt. Das Häkchen schaltet auf die deutschen Szenen um. Ausschalten stellt den alten Zustand wieder her.",
+    retroStarting: "Die Retro-Akte wird bearbeitet …",
+    retroDone: "Die Retro-Version spricht jetzt Deutsch.",
+    retroRemoved: "Die Retro-Version spricht wieder Englisch.",
+    retroStep: (done, total) => `Retro-Episoden: ${done} von ${total}`,
     install: "Stimmen installieren", remove: "Fall zu den Akten legen", removeHint: "Stimmen entfernen", cancel: "Abbrechen",
     photo: "Beweisfoto: die Erde mit Hasenohren", progress: "Fortschritt", languageGroup: "Sprache", seasonGroup: "Season",
     stampWorking: "In Arbeit", stampSolved: "Gelöst", stampOpen: "Ungelöst",
@@ -31,6 +41,16 @@ const TEXT = {
     sourceCaption: "Témoins (ancienne version)", sourceEmpty: "Choisir l'ancienne version française",
     episodes: "Épisodes", installed: "installé",
     deess: "", deessHint: "",
+    music: "Couper la musique pendant les pauses",
+    musicHint: "Là où les répliques sont plus longues, la cinématique attend. La musique s'estompe alors un instant. Décoché, elle continue, mais peut finir avant la scène.",
+    retro: "Doubler aussi la version rétro",
+    retroHint: "Les épisodes originaux du mode rétro reçoivent les anciennes voix et les textes. Décocher les remet en anglais.",
+    retro1: "Réparer la version rétro",
+    retro1Hint: "Steam fournit déjà les épisodes d'origine en français, mais les joue avec le minutage anglais : les voix sont hachées. La case passe aux scènes françaises. Décocher rétablit l'état d'avant.",
+    retroStarting: "Le dossier rétro est en cours…",
+    retroDone: "La version rétro parle maintenant français.",
+    retroRemoved: "La version rétro reparle anglais.",
+    retroStep: (done, total) => `Épisodes rétro : ${done} sur ${total}`,
     install: "Installer les voix", remove: "Classer l'affaire", removeHint: "Retirer les voix", cancel: "Annuler",
     photo: "Photo à conviction : la Terre avec des oreilles de lapin", progress: "Progression", languageGroup: "Langue", seasonGroup: "Saison",
     stampWorking: "En cours", stampSolved: "Résolu", stampOpen: "Non résolu",
@@ -93,6 +113,9 @@ for (const season of SEASONS) {
     installed: {},
     selected: new Set(season.episodes.map(([no]) => no)),
     deess: true,
+    music: true,
+    retroAvailable: false,
+    retro: {},
     note: { key: "open" },
     noteIsError: false,
     chosen: [],
@@ -200,6 +223,9 @@ function renderStaticText() {
   $("episodesLegend").textContent = words.episodes;
   $("deessText").textContent = words.deess;
   $("deessRow").title = words.deessHint;
+  $("musicText").textContent = words.music;
+  $("musicRow").title = words.musicHint;
+  $("retroRow").title = state.season === 1 ? words.retro1Hint : words.retroHint;
   $("install").textContent = words.install;
   $("removeText").textContent = words.remove;
   $("removeHint").textContent = words.removeHint;
@@ -252,6 +278,13 @@ function render() {
   $("deessRow").hidden = state.language !== "german";
   $("deess").checked = current.deess;
   $("deess").disabled = busyHere;
+  $("music").checked = current.music;
+  $("music").disabled = busyHere;
+  const dubbed = Object.values(current.retro);
+  $("retroRow").hidden = !current.retroAvailable;
+  $("retroText").textContent = t()[season.id === 1 ? "retro1" : "retro"] + (dubbed.length ? ` (${TEXT[dubbed[0]].short})` : "");
+  $("retro").checked = dubbed.length > 0;
+  $("retro").disabled = state.running || (!dubbed.length && !current.sourceOk);
   $("actions").hidden = busyHere;
   $("running").hidden = !busyHere;
   renderButtons();
@@ -264,6 +297,8 @@ async function refreshPaths(id) {
   current.gameOk = result.game_ok;
   current.sourceOk = result.source_ok;
   current.installed = result.installed;
+  current.retroAvailable = result.retro_available;
+  current.retro = result.retro;
 }
 
 async function pick(field) {
@@ -299,6 +334,7 @@ function setProgress(fraction, text) {
 
 /* Each episode has two phases of about equal length: voices, then timing. */
 function overallProgress(step, done, total) {
+  if (step === "Retro") return done / Math.max(total, 1);
   const chosen = cases[state.runSeason].chosen;
   const match = /^(\S+) (\d+)$/.exec(step);
   if (!match || !chosen.length) return 0;
@@ -308,6 +344,7 @@ function overallProgress(step, done, total) {
 }
 
 function friendlyStep(step, done, total) {
+  if (step === "Retro") return t().retroStep(done, total);
   const match = /^(\S+) (\d+)$/.exec(step);
   if (!match) return step;
   return t().step(match[2], match[1] === "Stimmen", done, total);
@@ -335,7 +372,7 @@ async function follow() {
   state.runSeason = null;
   await refreshPaths(id);
   if (update.finished === 0) {
-    running.note = { key: state.mode === "remove" ? "removed" : "done" };
+    running.note = { key: { remove: "removed", retroOn: "retroDone", retroOff: "retroRemoved" }[state.mode] || "done" };
     running.noteIsError = false;
   } else if (update.cancelled) {
     running.note = { key: "cancelled" };
@@ -361,7 +398,7 @@ function beginRun(mode, key) {
 async function install() {
   const current = caseNow();
   current.chosen = seasonNow().episodes.map(([no]) => no).filter((no) => current.selected.has(no));
-  const error = await window.pywebview.api.install(current.game, sourceOf(current), current.chosen, current.deess, state.language);
+  const error = await window.pywebview.api.install(current.game, sourceOf(current), current.chosen, current.deess, state.language, current.music);
   if (error) {
     current.note = { text: error };
     current.noteIsError = true;
@@ -374,6 +411,18 @@ async function install() {
 async function removeDub() {
   const started = await window.pywebview.api.uninstall(caseNow().game, state.language);
   if (started) beginRun("remove", "removing");
+}
+
+async function switchRetro(on) {
+  const current = caseNow();
+  const error = await window.pywebview.api.retro(current.game, sourceOf(current), on, state.language, current.music);
+  if (error) {
+    current.note = { text: error };
+    current.noteIsError = true;
+    render();
+    return;
+  }
+  beginRun(on ? "retroOn" : "retroOff", "retroStarting");
 }
 
 window.addEventListener("pywebviewready", async () => {
@@ -389,6 +438,8 @@ window.addEventListener("pywebviewready", async () => {
 $("gameRow").addEventListener("click", () => pick("game"));
 $("sourceRow").addEventListener("click", () => pick("source"));
 $("deess").addEventListener("change", (event) => { caseNow().deess = event.target.checked; });
+$("music").addEventListener("change", (event) => { caseNow().music = event.target.checked; });
+$("retro").addEventListener("change", (event) => switchRetro(event.target.checked));
 for (const tab of document.querySelectorAll(".lang-tab")) {
   tab.addEventListener("click", () => selectLanguage(tab.dataset.language));
 }

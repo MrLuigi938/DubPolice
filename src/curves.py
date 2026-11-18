@@ -6,19 +6,52 @@ property symbol. Two enclosing size fields, 29 bytes apart, share one end; the m
 import re
 import struct
 
+from chore_warp import is_retro
 from port_schedule import apply_map
 
 TIME_PROPERTY = bytes.fromhex("55 d3 dc a6 0f a3 d6 4b")
+RETRO_TIME_PROPERTY = b"\x04\x00\x00\x00time"  # the retro release names it in plain text, also 8 bytes
 TWO_KEYS = bytes.fromhex("22 00 00 00 02 00 00 00")
 MIN_SPACING = 0.05
 
 
+def time_property(d):
+    return RETRO_TIME_PROPERTY if is_retro(d) else TIME_PROPERTY
+
+
+def curve_start(d, t):
+    """The key list of the time property named at `t`, or None. Episode 205 keeps one more byte before it."""
+    for offset in (20, 21) if is_retro(d) else (20,):
+        if t + offset + 8 <= len(d):
+            size, keys = struct.unpack_from("<II", d, t + offset)
+            if keys >= 1 and size == 8 + 13 * keys:
+                return t + offset
+    return None
+
+
 def find_curves(d):
-    return [m.start() + 8 + 12 for m in re.finditer(re.escape(TIME_PROPERTY), d) if d[m.start() + 20:m.start() + 28] == TWO_KEYS]
+    found = (curve_start(d, m.start()) for m in re.finditer(re.escape(time_property(d)), d))
+    return [c for c in found if c is not None and d[c:c + 8] == TWO_KEYS]
 
 
 def enclosing(d, c):
-    """The two size fields around curve `c`: closest pair, 29 bytes apart, with the same end."""
+    """The two size fields around curve `c`: closest pair, 29 bytes apart, with the same end.
+
+    In the retro release the outer one is followed by one or two numbers, the chore's name in plain text, a zero and the
+    inner one."""
+    if is_retro(d):
+        for inner in range(c - 4, max(c - 2000, 8), -1):
+            end = inner + struct.unpack_from("<I", d, inner)[0]
+            if not c + 34 <= end <= len(d):
+                continue
+            for outer in range(inner - 12, max(inner - 600, 0), -1):
+                if outer + struct.unpack_from("<I", d, outer)[0] != end:
+                    continue
+                for gap in (8, 12):
+                    block, ln = struct.unpack_from("<II", d, outer + gap)
+                    if block == ln + 8 and outer + gap + 4 + block == inner:
+                        return outer, inner
+        raise ValueError(f"no enclosing size fields for curve at {c}")
     for inner in range(c - 4, max(c - 2000, 33), -1):
         size_i = struct.unpack_from("<I", d, inner)[0]
         size_o = struct.unpack_from("<I", d, inner - 29)[0]
@@ -75,5 +108,6 @@ def refine(original, patched, table, lines, protected=()):
         total_added += len(extra)
         changed += 1
         points += count
-    struct.pack_into("<I", work, 4, struct.unpack_from("<I", work, 4)[0] + total_added)
+    if not is_retro(original):  # the retro files have no total size in their header
+        struct.pack_into("<I", work, 4, struct.unpack_from("<I", work, 4)[0] + total_added)
     return bytes(work), changed, points

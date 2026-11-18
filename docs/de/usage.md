@@ -33,6 +33,27 @@ Eine ganze Season dauert auf dem Testrechner etwa 12 bis 23 Minuten und belegt 6
 
 Die alten deutschen Aufnahmen haben recht scharfe S-Laute. **Scharfe S-Laute abmildern** dämpft sie nur in dem Moment, in dem sie erklingen, und lässt den Rest der Stimme in Ruhe. Der Schalter ist vorausgewählt. Ausgeschaltet bleiben sie wie aufgenommen.
 
+## Retro-Modus vertonen
+
+Die Remaster von Season 2 und 3 bringen die Original-Episoden als Retro-Modus mit, aber nur auf Englisch. Hake **Retro-Version auch vertonen** an, damit auch sie die Stimmen und Texte deiner alten Version bekommen. Das dauert nur wenige Minuten. Entfernst du das Häkchen, spricht der Retro-Modus wieder Englisch.
+
+| Season | Was geändert wird |
+|---|---|
+| **2** | Stimmen, Texte und angepasste Szenen in den Retro-Dateien. Eine Sicherung der englischen Fassung liegt im Ordner `DubPolice_Retro` im Spielordner. Umlaute stehen ausgeschrieben da („ae“, „oe“, „ue“, „ss“), weil diese Engine keine anderen Zeichen anzeigt. |
+| **3** | Nur eine zusätzliche Datei `ep30x\Pack\0_0DubPolice.ttarch` pro Episode, mit Stimmen, Dialogtexten und angepassten Szenen. Die Untertitel zeigen echte Umlaute. |
+
+**Season 1:** Steam liefert die Original-Episoden schon in der Sprache, die für das Spiel eingestellt ist. In jedem Episodenordner liegt aber zusätzlich ein vollständiges englisches Archiv, das das Spiel bevorzugt. Die Stimmen laufen dann mit dem englischen Timing und klingen abgehackt. **Retro-Version reparieren** benennt das englische Archiv in `SamMax10x_english.ttarch.DubPolice` um, dann nutzt das Spiel die passenden Szenen. Ausschalten benennt es zurück.
+
+Im Retro-Modus von Season 3 werden auch die Menüs übersetzt. Wo die deutsche DVD-Fassung Menütexte englisch gelassen hatte, übernimmt Dub Police ihre Übersetzung desselben Begriffs von anderer Stelle oder setzt einen gängigen Begriff ein, etwa „Einstellungen“.
+
+## Abzeichen im Hauptmenü
+
+Nach der Installation klebt im Hauptmenü des Remasters ein Dub-Police-Abzeichen am Spiel-Logo: „Deutsch aktiv – viel Spaß!“ oder „Français activé – bon jeu !“, je nach der zuletzt installierten Sprache. Es steckt in einem eigenen kleinen Archiv. Das Original-Logo bleibt unverändert, und „Fall zu den Akten legen“ entfernt das Abzeichen wieder.
+
+## Musik in Dialogpausen
+
+Wartet eine Zwischensequenz auf einen längeren Satz, blendet die Musik 0,35 s vor der Pause aus und 0,45 s danach wieder ein. Ist **Musik in Dialogpausen ausblenden** aus, läuft sie stattdessen durch, kann dann aber vor dem Ende der Szene fertig sein. Die Einstellung gilt für die nächste Installation.
+
 ## Sprache wechseln
 
 Jede Episode hat immer nur eine Sprache. Installierst du eine Episode in der anderen Sprache, ersetzt das die vorige. Andere Episoden bleiben unberührt, und die Liste zeigt, welche Sprache jede hat.
@@ -44,13 +65,13 @@ Jede Episode hat immer nur eine Sprache. Installierst du eine Episode in der and
 ## Bekannte Grenzen
 
 - **Szenen halten kurz an.** Ist ein Satz länger als der englische, wartet die Szene am Satzende, bis er fertig ist. In normalen Gesprächen wird die Szene stattdessen leicht gestreckt.
-- **Lippen:** Auf Deutsch werden die Mundformen aus dem deutschen Text und der Lautstärke der Aufnahme berechnet. Sie folgen den Worten, sind aber nicht von Hand animiert. Französisch nutzt die gestreckten englischen Animationen.
+- **Lippen:** Die Mundformen werden aus dem deutschen oder französischen Text und der Lautstärke der Aufnahme berechnet. Sie folgen den Worten, sind aber nicht von Hand animiert. Im Retro-Modus von Season 3 bewegen sich die Münder wie im Englischen, weil die deutschen Lippen der DVD nicht zu dieser Engine passen.
 - **Abgeschnittene Sätze in Season 1:** Etwa jede zehnte Aufnahme war schon 2007 abgeschnitten, auf Deutsch wie auf Französisch. Auf Deutsch werden rund 930 davon mit einer vollständigen Aufnahme oder einem ergänzten Ende desselben Sprechers repariert. Der Rest bleibt, wie er war, weil nichts gut genug passte. Etwa 600 Aufnahmen wurden 2007 nie synchronisiert und bleiben englisch, wie im alten Spiel.
 - **Einige Sätze bleiben englisch**, weil keine alte Aufnahme dazu passt: bei Deutsch 40 in Season 1, 32 in Season 2 und 13 in Season 3.
 - **Untertitel** kommen aus dem Remaster und können leicht von den alten Aufnahmen abweichen, weil das Remaster teils neue Übersetzungen hat.
 - **Kurze Ausschnitte.** Manche Szenen spielen nur einen Teil einer anderen ab, etwa die Zukunftsvisionen in Episode 301. Das macht auch das Original, dort kann ein Satz mitten im Ausschnitt enden.
-- **Musik** kann in langen Szenen leicht vom Bild abweichen, weil sie weiterläuft, während die Szene wartet.
-- **Getestet mit** den Steam-Fassungen unter Windows. Alle französischen Episoden wurden gebaut und automatisch geprüft, aber noch nicht gespielt.
+- **Retro-Modus von Season 3:** Weiche Bewegungskurven werden an Pausenstellen kurz gestreckt statt angehalten. Ein komprimierter Kanal in 4 Spuren, vermutlich Mimik, behält seine alten Zeiten.
+- **Getestet mit** den Steam-Fassungen unter Windows. Alle französischen Episoden wurden gebaut und automatisch geprüft, aber noch nicht gespielt. Im Retro-Modus wurden Season 2 auf Deutsch und mehrere Episoden von Season 3 gespielt.
 
 ## Hilfe bei Problemen
 

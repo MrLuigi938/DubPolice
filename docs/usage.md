@@ -33,6 +33,27 @@ A full season takes about 12 to 23 minutes on the test PC and uses 620 to 810 MB
 
 The old German recordings have quite sharp S sounds. **Scharfe S-Laute abmildern** softens them only at the moment they sound and leaves the rest of the voice alone. It is on by default. Switch it off to keep them as they were recorded.
 
+## Dubbing the retro mode
+
+The Season 2 and 3 remasters include the original episodes as a retro mode, but only in English. Tick **Retro-Version auch vertonen / Doubler aussi la version rétro** so they get the voices and texts from your old version too. This takes only a few minutes. Untick it, and the retro mode speaks English again.
+
+| Season | What is changed |
+|---|---|
+| **2** | Voices, texts and adapted scenes in the retro files. A backup of the English version is kept in the `DubPolice_Retro` folder in the game folder. German umlauts are written out ("ae", "oe", "ue", "ss") and French accents are dropped, because this engine shows no other characters. |
+| **3** | Only one extra file `ep30x\Pack\0_0DubPolice.ttarch` per episode, with voices, dialog texts and adapted scenes. Subtitles show real umlauts. |
+
+**Season 1:** Steam already ships the original episodes in the language set for the game. Each episode folder, however, also holds a complete English archive that the game prefers. The voices then play with the English timing and sound choppy. **Retro-Version reparieren / Réparer la version rétro** renames the English archive to `SamMax10x_english.ttarch.DubPolice`, so the game uses the matching scenes. Switching it off renames it back.
+
+In the Season 3 retro mode the menus are translated too. Where the German DVD version had left menu texts in English, Dub Police takes its translation of the same term from elsewhere or uses a common term such as "Einstellungen".
+
+## Badge on the main menu
+
+After installing, a Dub Police badge sits on the game's logo in the remaster's main menu: "Deutsch aktiv – viel Spaß!" or "Français activé – bon jeu !", following the language installed last. It lives in a small archive of its own. The original logo stays unchanged, and **Fall zu den Akten legen / Classer l'affaire** removes the badge again.
+
+## Music in dialog pauses
+
+When a cutscene waits for a longer line, the music fades out 0.35 s before the pause and back in 0.45 s after it. With **Musik in Dialogpausen ausblenden / Couper la musique pendant les pauses** off, it keeps running instead, but may then end before the scene does. The setting applies to the next installation.
+
 ## Changing the language
 
 Each episode holds one language at a time. Install an episode in the other language and it replaces the old one. Other episodes are not affected, and the list shows which language each one has.
@@ -44,13 +65,13 @@ Each episode holds one language at a time. Install an episode in the other langu
 ## Known limits
 
 - **Scenes pause briefly.** When a line is longer than the English one, the scene holds at the end of the sentence until it is finished. In normal conversations, the scene stretches slightly instead.
-- **Lips:** in German, mouth shapes are worked out from the German text and the loudness of the recording, so they follow the words but are not hand-animated. French uses the English animations, stretched.
+- **Lips:** mouth shapes are worked out from the German or French text and the loudness of the recording, so they follow the words but are not hand-animated. In the Season 3 retro mode, mouths move as in English, because the German lips of the DVD do not fit that engine.
 - **Cut-off lines in Season 1:** about one recording in ten was already cut off in 2007, in German and French alike. In German, about 930 of them are repaired with a complete take or a completed ending from the same actor. The rest stay as they were, because nothing fit well enough. About 600 recordings were never dubbed in 2007 and stay in English, as in the old game.
 - **A few lines stay in English** because no old recording matches them: 40 in Season 1, 32 in Season 2 and 13 in Season 3 for German.
 - **Subtitles** come from the remaster and can differ slightly from the old recordings, because the remaster partly has new translations.
 - **Short excerpts.** Some scenes play only part of another scene, such as the visions of the future in Episode 301. The original does the same, so a sentence can end mid-excerpt there.
-- **Music** can drift slightly from the picture in long scenes, as it keeps running while the scene waits.
-- **Tested with** the Steam versions on Windows. All French episodes have been built and checked automatically, but not yet played.
+- **Season 3 retro mode:** smooth movement curves are briefly stretched at pauses instead of standing still. A compressed channel in 4 tracks, probably facial expressions, keeps its old timing.
+- **Tested with** the Steam versions on Windows. All French episodes have been built and checked automatically, but not yet played. In the retro mode, Season 2 in German and several Season 3 episodes were played.
 
 ## Troubleshooting
 

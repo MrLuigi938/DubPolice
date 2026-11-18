@@ -23,7 +23,7 @@ python src/launcher.py --engine --game "<Remaster-Ordner>" --source "<alte Versi
 python src/launcher.py --engine --game "<Remaster-Ordner>" --uninstall
 ```
 
-`--language` ist `german` (Standard) oder `french`. Mit `--no-deess` bleiben die S-Laute bei Deutsch wie aufgenommen.
+`--language` ist `german` (Standard) oder `french`. Mit `--no-deess` bleiben die S-Laute bei Deutsch wie aufgenommen. Mit `--music-continuous` läuft die Musik in Dialogpausen durch. `--retro on` oder `--retro off` vertont nur den Retro-Modus oder macht ihn wieder englisch.
 
 Spieldaten gehören nie ins Repository, `.gitignore` schließt sie aus.
 
@@ -41,9 +41,14 @@ Spieldaten gehören nie ins Repository, `.gitignore` schließt sie aus.
 | `src/enhance.py` | Klangbearbeitung, De-Esser, MP3 in FSB5 |
 | `src/repair.py` | Abgeschnittene Aufnahmen reparieren |
 | `src/undubbed.py` | Aufnahmen von Season 1, die 2007 englisch blieben |
-| `src/lipsync.py` | Deutsche Mundformen |
+| `src/lipsync.py` | Deutsche und französische Mundformen, Geräte, Knochen-Lippen |
 | `src/anm_patch.py` | Lippen-Dateien strecken |
 | `src/chore_warp.py`, `src/chore_fit.py`, `src/port_schedule.py`, `src/curves.py` | Timing der Szenen |
+| `src/badge.py` | Abzeichen im Hauptmenü, BC3-Texturen |
+| `src/retro1.py` | Retro-Modus von Season 1 |
+| `src/retro.py` | Retro-Modus von Season 2 |
+| `src/retro3.py` | Retro-Modus von Season 3: Archiv, Dialoge, Menütexte |
+| `src/chore_mtre.py` | Szenen der Season-3-Retro-Engine lesen und anpassen |
 | `src/keys.py` | Schlüssel für die Spielarchive, aus den TTG Tools |
 | `assets/` | Das Logo als SVG und ICO |
 
@@ -66,6 +71,7 @@ Der Ablauf hängt nur an Länge und Zuordnung der Aufnahmen. Eine neue Sprache b
 | `.ttarch` Version 2 | Zahl 2 am Anfang | Season 1 (2007), Deutsch und Französisch | Blowfish-Tabelle; Metadaten blockweise: jeder 32. Blowfish, jeder 80. roh, der Rest invertiert |
 | `.ttarch` ohne Version | Tabellengröße am Anfang | Season 1, englische Disc (nicht unterstützt) | wie Version 2 |
 | `.ttarch` Version 4 | Zahl 4 am Anfang | Season 2 (2009) | Blowfish-Tabelle; zlib-Blöcke |
+| `.ttarch` Version 8 | Zahl 8 am Anfang | Retro-Modus von Season 3 (Steam) | Telltale-Blowfish-Variante oder keine; Daten teils verschleiert |
 | `.ttarch` Version 9 | Zahl 9 am Anfang | Season 3 (2010) | Telltale-Blowfish-Variante; Tabelle und Blöcke teils komprimiert |
 | `.ttarch2` | `ECTT` | Remaster, komprimiert | Telltale-Blowfish-Variante, dann Deflate in 64-KB-Blöcken |
 | `.ttarch2` | `NCTT` | Remaster, roh | keine |
@@ -168,7 +174,64 @@ Aufnahmen, die 2007 englisch blieben, sind auf Deutsch und Französisch dieselbe
 
 Normale Gespräche werden stattdessen während der Zeile leicht gestreckt.
 
+## Abzeichen im Hauptmenü (`src/badge.py`)
+
+Das Logo im Hauptmenü ist eine Textur im UI-Archiv (`ui_logoSamMaxSaveTheWorld`, `ui_logoSamMaxBeyondTimeAndSpace`, `ui_logoSamMaxTheDevilsPlayhouse`): BC3 (DXT5), eine Ebene, 1024 × 1024 bzw. 2048 × 1024. Dub Police dekodiert sie, setzt das Abzeichen rechts unten an den Schriftzug und kodiert nur die 4×4-Blöcke neu, die das Abzeichen berührt. Alle anderen Blöcke bleiben Byte für Byte original. Die Abzeichen sind einmal in ihrer Endgröße gezeichnet (Schrift Bangers und Special Elite) und liegen als RGBA in `src/ui/badges`.
+
+Das geänderte Logo kommt in `<Prefix>_pc_UI_DubPolice_uncompressed.ttarch2`. `_resdesc_51_UIDubPolice.lua` ist eine zweite Beschreibung des UI-Satzes mit `descriptionPriority = 100`, die dieses Archiv zuerst nennt, abgeleitet aus `_resdesc_50_UI.lua` wie bei den Episoden.
+
+## Retro-Modus von Season 1 (`src/retro1.py`)
+
+Steam legt in jeden Episodenordner zwei vollständige Archive, `SamMax10x_english.ttarch` und das in der Spielsprache, jedes mit eigenen Choreografien. Das Spiel bevorzugt das englische, die synchronisierten Stimmen laufen dann mit englischem Timing und brechen ab. `--retro on` benennt das englische Archiv in `….ttarch.DubPolice` um, `--retro off` und `--uninstall` benennen es zurück. Gelöscht wird nichts.
+
+## Retro-Modus
+
+`--retro on` vertont die Original-Episoden des Remasters, `--retro off` macht sie wieder englisch. Welche Episoden vertont sind, steht unter `retro` in `SamMax_GermanDub.json`. `--uninstall` stellt sie ebenfalls wieder her.
+
+### Season 2 (`src/retro.py`)
+
+- **Archiv:** ein flaches Archiv pro Episode (`SamMax20x_english.ttarch`, Version 2). Datendateien sind nach 4 Kennbytes blockweise verschleiert: `aadeaf64` (Episode 205) mit Blöcken von 0x100 Byte, jeder 8. Blowfish, der Rest invertiert; jede andere Kennung mit Blöcken von 0x80, jeder 32. Blowfish, jeder 80. roh, der Rest invertiert.
+- **Einbau:** Geänderte Dateien werden ans Archiv angehängt und die Tabelle zeigt auf sie. Die englische Tabelle und die ersetzten Stimmen liegen in `DubPolice_Retro`, damit sich alles Byte für Byte zurückstellen lässt.
+- **Texte:** `english.langdb` bekommt den Text der alten Version. Die Engine zeigt nichts außerhalb von ASCII an, also werden Umlaute ausgeschrieben und Akzente entfernt.
+- **Szenen:** Namen stehen im Klartext mit vorangestellter Länge, Zeilen heißen `<Nummer>.langres`, die Zeitkurven heißen `time`. Die Szenen werden mit derselben Pausen-Logik wie das Remaster angepasst.
+
+### Season 3 (`src/retro3.py`, `src/chore_mtre.py`)
+
+**Archiv.** Jede Episode lädt alle `.ttarch` in `ep30x\Pack`. Von zwei gleichnamigen Dateien gewinnt das Archiv, das alphabetisch zuerst kommt, wie Telltales Patches `0_…` vor den Daten `1_…`. Dub Police schreibt `0_0DubPolice.ttarch`: Version 8, unverschlüsselt, ohne Kompression, Aufbau wie das `0_8patch.ttarch` aus Episode 305, die beiden Build-Nummern aus dem Datenarchiv der Episode. Die Dateien von Episode 302 und einige Patches beginnen statt mit `ERTM` mit `aadeaf64` und sind wie bei Season 2 verschleiert, mit der Telltale-Blowfish-Variante.
+
+**Dialoge (`.dlog`).** Die Untertitel stehen in einer Tabelle: `Größe, Anzahl`, dann je Zeile `Nummer, Nummer, Verweis, Lippen-Name, Stimmen-Name, Block[Größe, 1, Sprecher, Text, 8 Byte], 8 Byte`. Ein leerer Block ist `8, 0`. 20 Byte vor der Tabelle steht ein umschließender Block, dessen Größe mitwächst. Die Stimme heißt wie die Zeilennummer, `.vox` aus der deutschen Fassung wird direkt abgespielt.
+
+**Szenen (`.chore`).** Nach `ERTM` und der Typliste (12 Byte je Typ) folgen Name, Länge, Zahl der Spuren und Agenten. Jede Spur ist: `Gruppe, Länge, Version, Priorität, Flags, Name, Steuer-Animation, Blockliste, 8 Schalter, Eigenschaften, …`. Die Blockliste ist `Größe, Anzahl` und je Block `Start, Ende, Loop-Zeichen, Skalierung`.
+
+Die Steuer-Animation:
+
+```
+u32 Größe, u32 Version (4|5), u32 Flags, u64 Name, u32 0, f32 0
+u32 Innengröße (= Größe − 28), u32 Kanäle, u32 Pool, u32 Typen
+je Typ: u64 Typ, u32 0, u16 Kanäle dieses Typs, u16 Typ-Version
+je Kanal sein Inhalt, je Kanal u32 Flags (oberes Byte: 1 Zeit, 2 Gewicht, 4 Bewegung, 5 Eigenschaft), u16 0
+je Kanal u64 Name, u32 0
+```
+
+- **Zeitliste:** `u16 Anzahl`, dann je Schlüssel `Wert, f32 Zeit`, dann 2 Bit je Schlüssel für die Überblendung zum nächsten: 0 Sprung, 1 gerade Linie, 3 weiche Kurve.
+- **Typen:** Zahl (4), Ja/Nein (1), Vektor (12) und Drehung (16) als Zeitliste oder Einzelwert; Texte (`u32 Länge` + Text) als Zeitliste oder Einzelwert; zwei Blockstrings (Verweis auf eine Szene) als Zeitliste oder Einzelwert. Ein komprimierter Typ (`a4e0fd8b…`, 4 Spuren) ist nicht entschlüsselt. Die Kanäle davor werden trotzdem an Ort und Stelle verschoben.
+- **Pool:** je Zeitliste `4 + aufgerundet4((Wertgröße + 4) × n) + 4 × ((n − 1) // 16)` Byte, Texte mit 4 Byte je Schlüssel. Die Formel stimmt für alle 161.406 Steuer-Animationen. Ein zu kleiner Pool lässt das Spiel beim Laden abstürzen.
+- **Eingebettete Szenen:** Der Zeit-Kanal zählt in Anteilen der inneren Länge. Vor dem Namen der Spur steht diese Länge noch einmal.
+
+**Pausen.** Die Pausen kommen aus derselben Rechnung wie beim Remaster. Jede Zeit nach einer Pause wandert um deren Länge. Kanäle mit Sprung oder gerader Linie bekommen zwei Haltepunkte. Weiche Kurven werden nur verschoben, weil ihre Formel unbekannt ist. Satz-Spuren werden auf die neue Länge gedehnt. Lautstärke-Kanäle von Tönen gehen in Pausen auf 0. Eingebettete Szenen werden zuerst angepasst. Die äußere Szene macht deren Pausen mit, ohne die innere Zeit anzuhalten.
+
+**Prüfungen.** In allen 12.454 Szenen stimmt die gefundene Spurenzahl mit dem Kopf überein, und jede Szene wird ohne Änderung Byte für Byte identisch zurückgeschrieben. Nach dem Anpassen wird geprüft: jeder deutsche Satz passt, jede Pause steht still, die Werte stimmen mit dem Original überein, die Pools stimmen.
+
+**Was beim Testen herauskam:**
+
+1. **Nur exaktes Lesen hilft.** Heuristische Suchen nach Zeitlisten trafen falsche Bytes und machten die Szenen kaputter.
+2. **Der Pool muss stimmen,** sonst stürzt das Spiel beim Start eines neuen Spiels ab.
+3. **Die Überblendart beachten.** Ein Haltepunkt mitten in einem Sprung-Abschnitt verschob die Kamera ins Leere.
+4. **Alle Spuren finden.** Leere Steuer-Animationen und unbekannte Typen ließen Spuren aus, die dann zur alten Zeit liefen. Szenen überlappten deshalb.
+5. **Unbekannte Kanäle nicht ganz liegen lassen.** Die Sichtbarkeit des Erzählers stand vor einem komprimierten Kanal und musste trotzdem mitwandern.
+
 ## Offene Fragen
 
 - **Doppelte Wörter:** Frühere Versionen wiederholten in Zwischensequenzen manchmal Wörter, meist bei Kamerawechseln. Die Ursache wurde nie gefunden. Mit der aktuellen Pausen-Methode wurden sie nicht mehr gemeldet.
-- **Deutsche Choreografien von 2010:** Season 3 enthält eigene deutsche Choreografien, die als Zeitvorlage taugen könnten. Das ist nicht untersucht.
+- **Deutsche Choreografien von 2010:** untersucht. Telltale hat damals nur 5 Szenen von Season 3 an die deutschen Sätze angepasst, dabei alle Zeiten der Szene gestreckt. Als Vorlage taugen sie nicht, sie bestätigten aber, welche Werte Zeiten sind.
+- **Komprimierter Kanal der Season-3-Retro** (`a4e0fd8b…`), vermutlich Mimik: noch nicht entschlüsselt.

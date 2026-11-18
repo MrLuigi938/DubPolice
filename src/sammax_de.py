@@ -32,14 +32,19 @@ NO_WINDOW = subprocess.CREATE_NO_WINDOW if os.name == "nt" else 0
 # Bundled inside the exe; next to src/ when run from the source code.
 BIN = os.path.join(HERE, "bin") if hasattr(sys, "_MEIPASS") else os.path.join(os.path.dirname(HERE), "bin")
 
-from anm_patch import patch  # noqa: E402
+from anm_patch import key_blocks, patch  # noqa: E402
 from build_mod import crc64, make_archive  # noqa: E402
 from chore_fit import line_resources  # noqa: E402
-from chore_warp import chore_info, find_times, line_hashes  # noqa: E402
-from curves import TIME_PROPERTY, refine  # noqa: E402
+from chore_warp import chore_info, find_times, is_retro, line_hashes  # noqa: E402
+from curves import curve_start, enclosing, refine, time_property  # noqa: E402
 from ectt import Blowfish7, Ectt  # noqa: E402
 import enhance  # noqa: E402
 import lipsync  # noqa: E402
+import badge  # noqa: E402
+import chore_mtre  # noqa: E402
+import retro  # noqa: E402
+import retro1  # noqa: E402
+import retro3  # noqa: E402
 import repair  # noqa: E402
 from undubbed import UNDUBBED  # noqa: E402
 from nctt import read_nctt  # noqa: E402
@@ -59,6 +64,8 @@ SEASONS = {
         "files": {"data": "sammax{e}_{lang}.ttarch"},
         "same_ids": False,
         "flat": True,
+        # Steam installs its original episodes already dubbed; they only need to stop using the English archive.
+        "retro": True,
     },
     2: {
         "exe": "SamMax200.exe",
@@ -72,6 +79,8 @@ SEASONS = {
             "voice_dub": "2_sammax{e}_pc_voice_{lang}.ttarch",
         },
         "same_ids": False,
+        # The remaster installs the original episodes for its retro mode, in English only; they can be dubbed too.
+        "retro": True,
     },
     3: {
         "exe": "SamMax300.exe",
@@ -85,6 +94,8 @@ SEASONS = {
             "voice_dub": "1_sammax{e}_pc_localized_data_{lang}.ttarch",
         },
         "same_ids": True,
+        # Its original episodes too, in an archive of their own next to the game's (see retro3).
+        "retro": True,
     },
 }
 SPEEX_DLL = os.path.join(BIN, "libspeex-1.dll")
@@ -577,7 +588,8 @@ def nested_uses(d, name_crc, blocks):
     ordered = sorted(blocks)
     done = set()
     for m in re.finditer(re.escape(name_crc), d):
-        later = [b for b in ordered if b > m.start()]
+        at = m.end() - 8  # a hash, or the last 8 bytes of a plain-text name
+        later = [b for b in ordered if b > at]
         if not later or later[0] in done:
             continue
         first = later[0]
@@ -587,12 +599,10 @@ def nested_uses(d, name_crc, blocks):
             continue
         rows = [struct.unpack_from("<ff", d, first + 13 * i) for i in range(count)]
         curve = None
-        t = d.find(TIME_PROPERTY, m.start(), first)
-        if t >= 0:
-            c = t + 20
-            size, keys = struct.unpack_from("<II", d, c)
-            if keys >= 1 and size == 8 + 13 * keys:
-                curve = (c, keys)
+        t = d.find(time_property(d), at, first)
+        c = curve_start(d, t) if t >= 0 else None
+        if c is not None:
+            curve = (c, struct.unpack_from("<I", d, c + 4)[0])
         uses.append((rows, curve))
     return uses
 
@@ -668,6 +678,15 @@ def retime_nested_curves(d, out, kids):
     for name_crc, old_length, kid_events in kids:
         table = hold_table(kid_events)
         new_length = old_length + sum(extra for _, extra in kid_events)
+        # The outer chore keeps the nested chore's length right after its name. Left at the old length, the game plays
+        # the longer nested chore in slow motion and cuts off its end. Some originals store a slightly different length
+        # (125.06 for a 125.31 s chore at the start of Season 3): those grow in proportion.
+        for m in re.finditer(re.escape(name_crc), d):
+            at = m.end()
+            if at + 4 <= len(d):
+                stored = struct.unpack_from("<f", d, at)[0]
+                if old_length > 0 and 0.9 < stored / old_length < 1.1:
+                    struct.pack_into("<f", out, at, stored * new_length / old_length)
         for _rows, curve in nested_uses(d, name_crc, blocks):
             if curve:
                 c, keys = curve
@@ -683,19 +702,34 @@ def named_records(d, body, pattern, crc):
     hits = []
     for m in pattern.finditer(d, body):
         n = crc[m.group()]
-        if not hits or hits[-1][1] != n or m.start() - hits[-1][0] > 64:
-            hits.append((m.start(), n))
+        at = m.end() - 8  # a hash, or the last 8 bytes of a plain-text name
+        if not hits or hits[-1][1] != n or at - hits[-1][0] > 64:
+            hits.append((at, n))
     return hits
 
 
-def fix_sounds(original, patched, table, pattern, crc, lines):
-    """Sounds keep their length and curve shape: every block just moves to its new start."""
+def track_records(d, body, pattern, crc):
+    """named_records without the chore's own name: every track of a retro chore names the chore it belongs to, and
+    that is not a nested chore."""
+    hits = named_records(d, body, pattern, crc)
+    if is_retro(d):
+        name_len = struct.unpack_from("<I", d, body + 4)[0]
+        own = d[body + 8:body + 8 + name_len].decode("latin-1").lower()
+        hits = [(p, n) for p, n in hits if n != own]
+    return hits
+
+
+def fix_sounds(original, patched, table, pattern, crc, lines, hold=False, music_pause=True):
+    """Sounds keep their length and curve shape: every block just moves to its new start.
+
+    With `hold` (cutscenes), sounds are left to pause with everything else; see silence_pauses. Without
+    `music_pause` the music keeps running through the pauses all the same."""
     body, _, length = chore_info(original)
     blocks, keys, _ = find_times(original, body, length)
     blocks = sorted(blocks)
     out = bytearray(patched)
     protected = []
-    hits = named_records(original, body, pattern, crc)
+    hits = track_records(original, body, pattern, crc)
     line_positions = sorted(x[1] for x in lines)
     for j, (pos, name) in enumerate(hits):
         limit = hits[j + 1][0] if j + 1 < len(hits) else len(original)
@@ -710,7 +744,7 @@ def fix_sounds(original, patched, table, pattern, crc, lines):
         own = own[:count] if 1 <= count <= 64 else own[:1]
         if name.endswith(".chore"):
             protected.append((pos, own[0]))
-        if not name.endswith(".wav"):
+        if not name.endswith(SOUNDS) or (hold and (music_pause or not is_music(name))):
             continue
         protected.append((pos, own[0]))
         rows = [struct.unpack_from("<ff", original, b) for b in own]
@@ -726,10 +760,105 @@ def fix_sounds(original, patched, table, pattern, crc, lines):
     return bytes(out), protected
 
 
+CONTRIBUTION = b"\x0c\x00\x00\x00contribution"
+CONTRIBUTION_HASH = bytes.fromhex("f6 b5 7f 6e 58 41 d3 9b")  # the remaster names properties by hash
+FADE_OUT = 0.35   # seconds the music fades out before a pause, while it still plays
+FADE_IN = 0.45    # seconds it fades back in after the pause
+MIN_PAUSE = 0.09  # shorter holds are not heard
+
+
+def is_music(name):
+    """Music tracks are named mus_*, in the remaster (.wav) and in the retro episodes (.aud)."""
+    return name.rsplit("/", 1)[-1].lower().startswith("mus_")
+
+
+def pauses(table):
+    """The pauses of a cutscene table, in new time: where the original stands still for a moment."""
+    xs, ys = table
+    return [(ys[i], ys[i + 1]) for i in range(len(xs) - 1)
+            if xs[i + 1] - xs[i] <= 2.5 * STEP and ys[i + 1] - ys[i] > xs[i + 1] - xs[i] + 0.05]
+
+
+def silence_pauses(d, table, pattern, crc, music_pause=True):
+    """Cutscenes: a sound that pauses repeats its last moment, so it is turned down for the pause.
+
+    Each sound track has a volume curve ("contribution", for fading in and out) after its time curve; it gets keys that
+    fade to silence in the moment before each pause and back in the moment after it. Pauses closer together than
+    the two fades stay silent in between."""
+    holds = []
+    for h0, h1 in pauses(table):
+        if h1 - h0 < MIN_PAUSE:
+            continue
+        if holds and h0 - holds[-1][1] < FADE_OUT + FADE_IN:
+            holds[-1] = (holds[-1][0], h1)
+        else:
+            holds.append((h0, h1))
+    if not holds:
+        return d
+    body = chore_info(d)[0]
+    hits = track_records(d, body, pattern, crc)
+    retro_chore = is_retro(d)
+    prop, offsets = (CONTRIBUTION, (28, 29)) if retro_chore else (CONTRIBUTION_HASH, (20,))
+    out = bytearray(d)
+    total = 0
+    for j in range(len(hits) - 1, -1, -1):
+        pos, name = hits[j]
+        if not name.endswith(SOUNDS) or (is_music(name) and not music_pause):
+            continue
+        limit = hits[j + 1][0] if j + 1 < len(hits) else len(d)
+        at = d.find(prop, pos, limit)
+        if at < 0:
+            continue
+        c = None
+        for offset in offsets:
+            size, count = struct.unpack_from("<II", d, at + offset)
+            if count >= 1 and size == 8 + 13 * count and at + offset + size <= len(d):
+                c = at + offset
+                break
+        if c is None:
+            continue
+        keys = [(struct.unpack_from("<f", d, c + 8 + 13 * i)[0], d[c + 12 + 13 * i:c + 17 + 13 * i],
+                 struct.unpack_from("<f", d, c + 17 + 13 * i)[0]) for i in range(count)]
+        first, last = keys[0][0], keys[-1][0]
+
+        def volume(t):
+            if t <= keys[0][0]:
+                return keys[0][2]
+            for (t0, _m, v0), (t1, _n, v1) in zip(keys, keys[1:]):
+                if t0 <= t <= t1:
+                    return v0 if t1 == t0 else v0 + (v1 - v0) * (t - t0) / (t1 - t0)
+            return keys[-1][2]
+
+        mode = keys[0][1]
+        new = list(keys)
+        for h0, h1 in holds:
+            if h1 <= first or h0 >= last:
+                continue
+            a, b = max(first, h0 - FADE_OUT), min(last, h1 + FADE_IN)
+            new = [k for k in new if not a < k[0] < b]
+            new += [(a, mode, volume(a)), (max(a, h0), mode, 0.0), (min(b, h1), mode, 0.0), (b, mode, volume(b))]
+        if sorted(new, key=lambda k: k[0]) == keys:
+            continue
+        new.sort(key=lambda k: k[0])
+        data = struct.pack("<II", 8 + 13 * len(new), len(new)) + b"".join(
+            struct.pack("<f", t) + m + struct.pack("<f", v) for t, m, v in new)
+        grow = len(data) - (8 + 13 * count)
+        outer, inner = enclosing(d, c)
+        out[c:c + 8 + 13 * count] = data
+        for field in (outer, inner):
+            struct.pack_into("<I", out, field, struct.unpack_from("<I", out, field)[0] + grow)
+        total += grow
+    if not retro_chore:  # the remaster's header holds the total size, like in curves.refine
+        struct.pack_into("<I", out, 4, struct.unpack_from("<I", out, 4)[0] + total)
+    return bytes(out)
+
+
 _shared = {}
+MUSIC_PAUSE = {"on": True}  # set from the command line; the workers get it through init_worker
 
 
-def init_worker(hashes, seconds, crc):
+def init_worker(hashes, seconds, crc, music_pause=True):
+    _shared["music_pause"] = music_pause
     _shared["hashes"] = hashes
     _shared["seconds"] = seconds
     _shared["crc"] = crc
@@ -743,19 +872,43 @@ def convert_chore(job):
     active = active_seconds(d, hashes, seconds)
     table = line_table(d, hashes, active) if events is None else hold_table(events)
     data, report, _length, lines = port(d, hashes, active, table)
-    data, protected = fix_sounds(d, data, table, _shared["pattern"], _shared["crc"], lines)
+    # Cutscenes pause their sounds and music too, quietly, so they stay with the picture; elsewhere they keep running.
+    # The music can be asked to keep running there as well.
+    hold = events is not None
+    music_pause = _shared.get("music_pause", True)
+    data, protected = fix_sounds(d, data, table, _shared["pattern"], _shared["crc"], lines, hold, music_pause)
     data = bytearray(data)
     retime_nested_curves(d, data, kids)
     data = bytes(data)
     note = None
     try:
         data = refine(d, data, table, lines, protected)[0]
+        if hold:
+            data = silence_pauses(data, table, _shared["pattern"], _shared["crc"], music_pause)
     except ValueError as err:
         note = str(err)
     return name, data, sum(not r[5] for r in report), note
 
 
 # ---------------------------------------------------------------- one episode
+
+
+def bone_lips(remaster):
+    """The episode's bone lip files by speaker: {speaker: [(length, data)]}, plus "speaker": {line id: speaker}."""
+    from anm_patch import length_offset
+    speaker = {}
+    for n in remaster.files:
+        if n.endswith("_english.landb"):
+            speaker.update({rid: who for rid, (who, _) in parse_new_lang(remaster.read(n)).items()})
+    out = {"speaker": speaker}
+    for n in remaster.files:
+        if n.endswith(".anm") and n[:-4].isdigit() and int(n[:-4]) in speaker:
+            d = remaster.read(n)
+            if d[:4] == b"6VSM" and not key_blocks(d) and not lipsync.toggle_block(d):
+                length = struct.unpack_from("<f", d, length_offset(d))[0]
+                if 0 < length < 600:
+                    out.setdefault(speaker[int(n[:-4])], []).append((length, d))
+    return out
 
 
 def build_episode(season, e, paths, game, work, pool_size, deess, language, pool=None):
@@ -793,17 +946,35 @@ def build_episode(season, e, paths, game, work, pool_size, deess, language, pool
         say(f"Episode {e}: abgeschnittene Aufnahmen repariert: {repaired['whole take']} durch eine vollständige Aufnahme, {repaired['graft']} mit angesetztem Ende.")
 
     common = Ectt(os.path.join(arch_dir, f"{prefix}_pc_Common_compressed.ttarch2"), key)
-    # Mouth shapes from the dubbed text; the spelling rules are German, so other languages keep the stretched English.
-    lips = language == "german"
-    lips_made = 0
+    # Mouth shapes from the dubbed text, with spelling rules for each dub language.
+    lips = language in lipsync.LANGUAGES
+    lips_made = switches = borrowed = 0
+    bones = None
     for rid, length in seconds.items():
         anm = f"{rid}.anm"
         source = remaster if anm in remaster.files else common if anm in common.files else None
         if source:
             template = source.read(anm)
+            if not key_blocks(template):
+                # Gadgets have a talk switch, set here from the loudness of the dubbed line.
+                made = lipsync.toggle_lips(template, levels[rid], length)
+                if made:
+                    files[anm] = made
+                    switches += 1
+                    continue
+                # Some characters (the Maimtron robot, the bugs, Sal) have bone animations whose keys count frames:
+                # a longer length leaves the end without data and the mouth jumps. They borrow a fitting one instead.
+                if bones is None:
+                    bones = bone_lips(remaster)
+                pool = bones.get(bones["speaker"].get(rid))
+                made = lipsync.borrow_lips(template, pool, length) if pool else None
+                if made and made is not template:
+                    files[anm] = made
+                    borrowed += 1
+                continue
             if lips and rid in spoken:
                 try:
-                    files[anm] = lipsync.german_lips(template, spoken[rid][1], levels[rid], length)
+                    files[anm] = lipsync.dub_lips(template, spoken[rid][1], levels[rid], length, language)
                     lips_made += 1
                     continue
                 except (ValueError, struct.error):
@@ -813,7 +984,8 @@ def build_episode(season, e, paths, game, work, pool_size, deess, language, pool
             except (ValueError, struct.error) as err:
                 say(f"  Lippen-Datei {anm} unverändert: {err}")
     if lips:
-        say(f"Episode {e}: {lips_made} Lippen-Dateien mit deutschen Mundformen.")
+        say(f"Episode {e}: {lips_made} Lippen-Dateien mit {'deutschen' if language == 'german' else 'französischen'} Mundformen.")
+    say(f"Episode {e}: {switches} Geräte nach der Lautstärke, {borrowed} Knochen-Lippen in passender Länge.")
 
     hashes = {}
     for n in remaster.files:
@@ -881,7 +1053,7 @@ def build_episode(season, e, paths, game, work, pool_size, deess, language, pool
     chores = needs_work
     too_long = 0
     notes = []
-    with futures.ProcessPoolExecutor(pool_size, initializer=init_worker, initargs=(hashes, seconds, crc)) as pool:
+    with futures.ProcessPoolExecutor(pool_size, initializer=init_worker, initargs=(hashes, seconds, crc, MUSIC_PAUSE["on"])) as pool:
         for i, (n, data, bad, note) in enumerate(pool.map(convert_chore, jobs, chunksize=4)):
             files[n] = data
             too_long += bad
@@ -917,11 +1089,13 @@ def descriptor(season, e, game, archive_name):
 
 
 def game_running(season):
+    """The remaster or one of its retro episodes."""
     try:
-        out = subprocess.run(["tasklist", "/FI", f"IMAGENAME eq {season['exe']}"], capture_output=True, creationflags=NO_WINDOW).stdout
-        return season["exe"].encode() in out
+        out = subprocess.run(["tasklist", "/FO", "CSV", "/NH"], capture_output=True, creationflags=NO_WINDOW).stdout.lower()
     except OSError:
         return False
+    names = [season["exe"]] + [f"SamMax{e}-orig.exe" for e in season["episodes"]]
+    return any(f'"{n.lower()}"'.encode() in out for n in names)
 
 
 def read_manifest(game):
@@ -945,7 +1119,9 @@ def delete_from_archives(game, names):
 
 
 def remove_files(game):
-    """Remove everything this tool installed."""
+    """Remove everything this tool installed, and give the retro episodes their English back."""
+    for e in read_manifest(game).get("retro", {}):
+        retro_module(e).restore(game, e)
     names = list(LEGACY_FILES) + read_manifest(game).get("files", [])
     removed = delete_from_archives(game, names)
     delete_from_archives(game, [n + ".tmp" for n in names])
@@ -970,6 +1146,191 @@ def write_atomic(path, data):
             time.sleep(0.5)
 
 
+# A lookahead, so a candidate that turns out wrong cannot swallow the start of the real name after it.
+PLAIN_NAME = re.compile(rb"(?s)(?=(....)([\w.\- ]{3,120}?\.(?:chore|anm|wav|aud|vox|langres|lang)))")
+LINE_NAMES = (".langres", ".lang")  # Season 2 retro, Season 3 retro
+SOUNDS = (".wav", ".aud", ".vox")  # the retro release names its sounds and music .aud, some noises .vox
+
+
+def plain_names(d):
+    """Retro chores name files in plain text, each after its length: {exact bytes with the length: lower-case name}."""
+    out = {}
+    for m in PLAIN_NAME.finditer(d):
+        name = m.group(2)
+        if struct.unpack_from("<I", m.group(1))[0] == len(name):
+            out[m.group(1) + name] = name.decode("latin-1").lower()
+    return out
+
+
+def retro_chores(game, e, paths, pool_size):
+    """Fit the dubbed lines into the retro episode's chores, the same way as in the remaster.
+
+    Returns ({chore name: new data}, short report)."""
+    key = load_key(None, f"SM{e}")
+    archive = FlatArchive(retro.retro_archive(game, e), key)
+    dubbed = OldArchive(paths["voice_dub"], key)
+    seconds = voice_lengths(dubbed, [n for n in dubbed.files if n.endswith(".vox") and n[:-4].isdigit()])
+    all_chores = {n: (n, retro.read_plain(archive, n)) for n in archive.files if n.endswith(".chore")}
+    archive._f.close()
+    return fit_plain_chores(all_chores, seconds, e, pool_size)
+
+
+def line_id(name):
+    """The line id of a plain line name such as 174080015.lang, or None."""
+    if name.endswith(LINE_NAMES):
+        stem = name.rsplit(".", 1)[0]
+        if stem.isdigit():
+            return int(stem)
+    return None
+
+
+def fit_plain_chores(all_chores, seconds, e, pool_size):
+    """Fit the dubbed lines into chores that name their files in plain text (the retro releases).
+
+    `all_chores` is {lower-case name: (name, data)}, `seconds` the dubbed length of each line.
+    Returns ({chore name: new data}, short report)."""
+    names = {}
+    for _n, d in all_chores.values():
+        names.update(plain_names(d))
+    hashes = {k: line_id(v) for k, v in names.items() if line_id(v) is not None}
+    crc = {k: v for k, v in names.items() if not v.endswith(LINE_NAMES)}
+    variants = {}
+    for k, v in crc.items():
+        if v.endswith(".chore"):
+            variants.setdefault(v, []).append(k)
+
+    wanted = re.compile(b"|".join(re.escape(h) for h, r in hashes.items() if r in seconds))
+    children = {}
+    for low, (_n, d) in all_chores.items():
+        body = chore_info(d)[0]
+        kids = {crc[k] for k in plain_names(d[body:]) if k in crc and crc[k].endswith(".chore")} & set(all_chores)
+        kids.discard(low)
+        if kids:
+            children[low] = kids
+    needs_work = {low for low, (_n, d) in all_chores.items() if wanted.search(d)}
+    grew = True
+    while grew:
+        grew = False
+        for low, kids in children.items():
+            if low not in needs_work and kids & needs_work:
+                needs_work.add(low)
+                grew = True
+
+    nested = {x for kids in children.values() for x in kids}
+    events, kid_data = {}, {}
+
+    def plan(low, path=()):
+        if low in events or low in path:
+            return
+        kids = children.get(low, set()) & needs_work
+        for kid in kids:
+            plan(kid, path + (low,))
+        d = all_chores[low][1]
+        info = []
+        for kid in sorted(kids):
+            if events.get(kid):
+                old_length = chore_info(all_chores[kid][1])[2]
+                info += [(k, old_length, events[kid]) for k in variants.get(kid, [])]
+        kid_data[low] = info
+        if low.startswith("cs_") or "_cs_" in low or low in nested or kids:
+            events[low] = pause_events(d, hashes, active_seconds(d, hashes, seconds), info)
+
+    for low in sorted(needs_work):
+        plan(low)
+    jobs = [(low, all_chores[low][1], events.get(low), kid_data.get(low, [])) for low in sorted(needs_work)]
+    out = {}
+    too_long = 0
+    notes = []
+    with futures.ProcessPoolExecutor(pool_size, initializer=init_worker, initargs=(hashes, seconds, crc, MUSIC_PAUSE["on"])) as pool:
+        for i, (n, data, bad, note) in enumerate(pool.map(convert_chore, jobs, chunksize=4)):
+            if data != all_chores[n][1]:
+                out[n] = data
+            too_long += bad
+            if note:
+                notes.append((n, note))
+            if i % 20 == 0:
+                progress(f"Retro-Szenen {e}", i, len(jobs))
+    progress(f"Retro-Szenen {e}", len(jobs), len(jobs))
+    for n, note in notes[:5]:
+        say(f"  {n}: {note}")
+    return out, f"{len(out)} Szenen angepasst ({len(events)} Zwischensequenzen mit Pausen, {len(notes)} ohne Zwischenpunkte)"
+
+
+def retro_module(e):
+    """The module that handles an episode's retro version: Seasons 1 and 3 have their own."""
+    return {"1": retro1, "3": retro3}.get(e[:1], retro)
+
+
+def dub_retro3(args, e, paths):
+    """Season 3: voices, texts and chores fitted to the dubbed lines, in one archive of their own."""
+    key = load_key(None, f"SM{e}")
+    retro3.restore(args.game, e)
+    data = OldArchive(paths["data"], key)
+    texts, english = {}, {}
+    for n in data.files:
+        if n.endswith(f"_{args.language}.landb"):
+            texts.update({rid: text for rid, (_who, text) in parse_old_landb(data.read(n)).items()})
+        elif n.endswith("_english.landb"):
+            english.update({rid: text for rid, (_who, text) in parse_old_landb(data.read(n)).items()})
+    # Texts the old release translated under other ids (its menus were built differently), found by their English.
+    by_english = dict(retro3.MENU_GERMAN) if args.language == "german" else {}
+    for rid, text in texts.items():
+        if english.get(rid) and text != english[rid]:
+            by_english.setdefault(retro3.english_key(english[rid]), text)
+    dubbed = OldArchive(paths["voice_dub"], key)
+    names = [n for n in dubbed.files if n.endswith(".vox") and n[:-4].isdigit()]
+    seconds = voice_lengths(dubbed, names)
+    voices = {n: dubbed.read(n) for n in names}
+    owner = retro3.game_files(args.game, e, key)
+    chores = {n: retro3.plain(a, n, key) for n, a in owner.items() if n.endswith(".chore")}
+    for a in set(owner.values()):
+        a._f.close()
+    fitted, _events = chore_mtre.fit(chores, seconds, lambda d: chore_info(d)[1:3], MUSIC_PAUSE["on"])
+    dialogs, lines, count = retro3.dub(args.game, e, key, texts, voices, fitted, by_english)
+    return f"{lines} Texte in {dialogs} Dialogen, {count} Stimmen, {len(fitted)} Szenen angepasst"
+
+
+def dub_retro(season, args, episodes, work):
+    """Give the retro episodes the old voices and texts in the chosen language."""
+    if not season.get("retro"):
+        raise SystemExit("Für die Retro-Episoden dieser Season gibt es das noch nicht.")
+    module = retro_module(episodes[0]) if episodes else retro
+    if module is retro1:
+        episodes = retro1.available(args.game, episodes, args.language)
+    else:
+        episodes = module.available(args.game, episodes) if episodes else []
+    if not episodes:
+        raise SystemExit("Im Spielordner sind keine Retro-Episoden installiert.")
+    manifest = read_manifest(args.game)
+    done = manifest.setdefault("retro", {})
+    if module is retro1:
+        for e in episodes:
+            retro1.dub(args.game, e, args.language)
+            done[e] = args.language
+            say(f"Retro-Episode {e}: nutzt jetzt ihr eigenes Archiv in dieser Sprache.")
+        write_atomic(os.path.join(args.game, MANIFEST), json.dumps(manifest, indent=1).encode("utf-8"))
+        say(f"FERTIG. Retro-Episoden repariert: {', '.join(episodes)}")
+        return
+    sources = collect_source(season, args.source, work, episodes, args.language)
+    pool_size = max(1, min(8, (os.cpu_count() or 2) - 1))
+    for i, e in enumerate(episodes):
+        progress("Retro", i, len(episodes))
+        if retro_module(e) is retro3:
+            report = dub_retro3(args, e, sources[e])
+            done[e] = args.language
+            write_atomic(os.path.join(args.game, MANIFEST), json.dumps(manifest, indent=1).encode("utf-8"))
+            say(f"Retro-Episode {e}: {report}.")
+            continue
+        retro.restore(args.game, e)
+        chores, report = retro_chores(args.game, e, sources[e], pool_size)
+        voices, _ = retro.dub(args.game, e, sources[e], args.language, chores)
+        done[e] = args.language
+        write_atomic(os.path.join(args.game, MANIFEST), json.dumps(manifest, indent=1).encode("utf-8"))
+        say(f"Retro-Episode {e}: Texte und {voices} Stimmen ersetzt, {report}.")
+    progress("Retro", len(episodes), len(episodes))
+    say(f"FERTIG. Retro-Episoden vertont: {', '.join(episodes)}")
+
+
 def episode_files(season, e, language):
     dub = f"{language.capitalize()}Dub"
     return [f"{season['prefix']}_pc_SamMax{e}_{dub}_uncompressed.ttarch2", f"_resdesc_51_SamMax{e}{dub}.lua"]
@@ -981,11 +1342,14 @@ def main():
     ap.add_argument("--source")
     ap.add_argument("--episodes", nargs="*", help="Standard: alle Episoden der Season")
     ap.add_argument("--language", default="german", help="Sprache der alten Version: german oder french")
+    ap.add_argument("--music-continuous", action="store_true", help="Musik in Zwischensequenzen bei Dialogpausen weiterlaufen lassen")
     ap.add_argument("--no-deess", action="store_true", help="S-Laute nicht abmildern (gilt nur für Deutsch, bei den anderen ist er aus)")
     ap.add_argument("--uninstall", action="store_true")
+    ap.add_argument("--retro", choices=("on", "off"), help="Nur die Retro-Episoden (Season 2) vertonen oder wieder englisch machen")
     ap.add_argument("--work", help="Arbeitsordner (Standard: temporär, wird danach gelöscht)")
     ap.add_argument("--log", help="Meldungen in diese Datei schreiben (für das Fenster)")
     args = ap.parse_args()
+    MUSIC_PAUSE["on"] = not args.music_continuous
     if args.log:
         sys.stdout = sys.stderr = open(args.log, "w", encoding="utf-8", buffering=1)
 
@@ -994,6 +1358,13 @@ def main():
         raise SystemExit("Bitte zuerst das Spiel schließen.")
     if args.uninstall:
         say(f"Entfernt: {remove_files(args.game)} Dateien. Das Spiel ist wieder im Originalzustand.")
+        return
+    if args.retro == "off":
+        manifest = read_manifest(args.game)
+        back = [e for e in season["episodes"] if retro_module(e).restore(args.game, e)]
+        manifest.pop("retro", None)
+        write_atomic(os.path.join(args.game, MANIFEST), json.dumps(manifest, indent=1).encode("utf-8"))
+        say(f"FERTIG. Retro-Episoden wieder englisch: {', '.join(back) or 'keine'}")
         return
     if args.language not in season["languages"]:
         raise SystemExit(f"Für dieses Spiel gibt es diese Sprachen: {', '.join(season['languages'])}")
@@ -1015,6 +1386,9 @@ def main():
         work = temporary
     os.makedirs(work, exist_ok=True)
     try:
+        if args.retro == "on":
+            dub_retro(season, args, episodes, work)
+            return
         sources = collect_source(season, args.source, work, episodes, args.language)
         # Repairs may use takes from any episode, so all of them are gathered when they are there.
         try:
@@ -1044,6 +1418,18 @@ def main():
             manifest["files"] = sorted((set(manifest.get("files", [])) - replaced) | {archive_name, desc_name})
             manifest.setdefault("episodes", {})[e] = stats[e]
             write_atomic(os.path.join(args.game, MANIFEST), json.dumps(manifest, indent=1).encode("utf-8"))
+        # The badge on the main menu says the dub is active, in the language just installed.
+        try:
+            ui = Ectt(os.path.join(arch, f"{season['prefix']}_pc_UI_compressed.ttarch2"), load_key(None, season["key"]))
+            menu = badge.menu_files(season, args.game, args.language, ui, Blowfish7(load_key(None, season["key"])),
+                                    encrypt, make_archive)
+            for name, data in menu:
+                write_atomic(os.path.join(arch, name), data)
+            manifest["files"] = sorted(set(manifest.get("files", [])) | {name for name, _ in menu})
+            write_atomic(os.path.join(args.game, MANIFEST), json.dumps(manifest, indent=1).encode("utf-8"))
+            say("Menü: Dub-Police-Abzeichen eingebaut.")
+        except (OSError, ValueError, KeyError) as err:
+            say(f"Menü: Abzeichen nicht eingebaut ({err}).")
         say("FERTIG. Installiert: " + ", ".join(f"Episode {e} ({s['lines']} Zeilen)" for e, s in stats.items()))
     finally:
         if temporary:

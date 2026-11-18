@@ -5,7 +5,7 @@
 <h1 align="center">Dub Police</h1>
 
 <p align="center">
-  Die alten Sam-&amp;-Max-Spiele konnten Deutsch. Die Remaster sprechen nur noch Englisch. Dub Police holt die Originalaufnahmen zurück: bei Season 1 direkt aus dem Remaster, bei Season 2 und 3 aus deiner alten Version. Echte Synchronsprecher, keine KI-Stimmen.
+  Die alten Sam-&amp;-Max-Spiele konnten Deutsch. Die Remaster sprechen nur noch Englisch, auch die Original-Episoden in ihrem Retro-Modus. Dub Police holt die Originalaufnahmen zurück: bei Season 1 direkt aus dem Remaster, bei Season 2 und 3 aus deiner alten Version. Echte Synchronsprecher, keine KI-Stimmen.
 </p>
 
 <p align="center">
@@ -19,12 +19,17 @@
 ![Das Fenster von Dub Police](docs/images/window-de.png)
 <p align="center"><sub>Screenshot mit Beispielordnern</sub></p>
 
+> **Neu in 2.0:** Auch der Retro-Modus spricht wieder: Season 1 ohne abgehackte Stimmen, Season 2 auf Deutsch und Französisch, Season 3 auf Deutsch samt Menü. Für Season 3 wurde dafür das Szenenformat der Engine von 2010 entschlüsselt. Ein Abzeichen im Hauptmenü zeigt, dass Dub Police aktiv ist. Alles dazu in den [Release Notes](docs/release-notes/2.0.0.de.md).
+
 ## Highlights
 
 - **Die Originalstimmen** – die Aufnahmen von damals, keine neue Synchronisation und keine KI.
 - **Alle drei Seasons** – Save the World, Beyond Time and Space und The Devil's Playhouse.
+- **Auch der Retro-Modus** – die Original-Episoden, die Steam mit den Remastern installiert, sprechen bei Season 2 Deutsch oder Französisch und bei Season 3 Deutsch. Ein Häkchen genügt.
 - **Szenen warten auf den Satz** – deutsche und französische Sätze sind oft länger als englische. Die Szenen machen ihnen Platz, damit niemand dazwischenredet. Stimmen werden nie beschleunigt.
-- **Lippen und Timing ziehen mit** – auf Deutsch folgen die Münder den deutschen Worten. Auf Französisch werden die englischen Mundbewegungen auf die Länge des neuen Satzes gestreckt.
+- **Lippen und Timing ziehen mit** – die Münder folgen den deutschen oder französischen Worten. Sprechende Geräte und Figuren mit Knochen-Animationen bewegen sich passend zur neuen Länge.
+- **Abzeichen im Hauptmenü** – ein Dub-Police-Aufkleber am Spiel-Logo zeigt „Deutsch aktiv – viel Spaß!“. So siehst du sofort, dass alles bereit ist.
+- **Musik mit Gefühl** – wartet eine Zwischensequenz auf einen längeren Satz, blendet die Musik weich aus und wieder ein. Auf Wunsch läuft sie einfach durch.
 - **Abgeschnittene Sätze repariert** – in der Season 1 von 2007 hört etwa jede zehnte Aufnahme mitten im Wort auf. Dub Police nimmt eine vollständige Aufnahme desselben Satzes derselben Figur oder ergänzt das Ende aus der Stimme desselben Sprechers.
 - **Sauberer Klang** – die alten Aufnahmen werden behutsam ins heutige Format gebracht. Bei Deutsch mildert ein Schalter scharfe S-Laute ab.
 - **Dein Spiel bleibt unberührt** – Dub Police legt nur Dateien dazu. Ein Klick entfernt alles wieder.
@@ -39,6 +44,16 @@
 | **3** The Devil's Playhouse | ✓ 10.204 von 10.217 Zeilen | – keine französische Fassung vorhanden |
 
 Die wenigen übrigen Zeilen haben keine passende alte Aufnahme und bleiben englisch.
+
+**Retro-Modus** (die Original-Episoden im Remaster):
+
+| Season | Deutsch | Französisch |
+|---|---|---|
+| **1** Save the World | ✓ repariert: keine abgehackten Stimmen mehr | ✓ repariert |
+| **2** Beyond Time and Space | ✓ mit angepassten Szenen | ✓ mit angepassten Szenen |
+| **3** The Devil's Playhouse | ✓ mit angepassten Szenen | – keine französische Fassung vorhanden |
+
+Bei Season 1 liefert Steam die Original-Episoden schon in deiner Sprache, spielt sie aber mit dem englischen Timing ab. Das Häkchen **Retro-Version reparieren** schaltet auf die passenden Szenen um.
 
 ## Woher die alten Stimmen kommen
 
@@ -58,6 +73,7 @@ Für Season 2 und 3 bringen die Remaster die alten Episoden nur auf Englisch mit
 2. `DubPolice.exe` in diesem Ordner starten. Oben links die Season wählen, oben rechts die Sprache.
 3. **Zeugen** prüfen, also deine alte Version. Bei Season 1 ist das Feld meist schon gefüllt: Steam installiert die alten Episoden für den Retro-Modus mit dem Remaster, in der Sprache, die in Steam für das Spiel eingestellt ist. Sonst den installierten Ordner auswählen, bei Season 2 auch die Disc.
 4. Episoden wählen und **Stimmen installieren** klicken. Eine ganze Season dauert etwa 12 bis 23 Minuten und belegt 620 bis 810 MB.
+   Für den Retro-Modus von Season 2 oder 3 zusätzlich **Retro-Version auch vertonen** anhaken.
 5. Im Spiel dieselbe Sprache einstellen. Fertig.
 
 Das Fenster gibt es auf Deutsch und Französisch, passend zu den beiden Sprachen, die es zurückbringt.
@@ -68,6 +84,7 @@ Das Fenster gibt es auf Deutsch und Französisch, passend zu den beiden Sprachen
 |---|---|
 | [Benutzung](docs/de/usage.md) | Welche alte Version du brauchst, Sprache wechseln, wieder entfernen, bekannte Grenzen, Hilfe bei Problemen |
 | [Entwicklung](docs/de/development.md) | Aus dem Quellcode bauen, wie es funktioniert, Dateiformate |
+| [Release Notes 2.0](docs/release-notes/2.0.0.de.md) | Was neu ist und wie der Retro-Modus von Season 3 möglich wurde |
 
 ## Gut zu wissen
 
@@ -75,7 +92,7 @@ Dub Police ist ein inoffizielles Fanprojekt und gehört nicht zu Skunkape Games,
 
 ## Danke
 
-Teile des Formatwissens stammen aus den Open-Source-[TTG Tools](https://github.com/HeitorSpectre/TTG-Tools). Dub Police nutzt [Speex](https://speex.org), [LAME](https://lame.sourceforge.io) über [lameenc](https://github.com/chrisstaite/lameenc), [NumPy](https://numpy.org), [7-Zip](https://www.7-zip.org) und [pywebview](https://pywebview.flowrl.com), dazu die Schriften Bangers und Special Elite. Die Lizenzen liegen in [licenses/](licenses).
+Teile des Formatwissens stammen aus den Open-Source-[TTG Tools](https://github.com/HeitorSpectre/TTG-Tools). Die Formatbeschreibung von [telltale-explorer](https://github.com/coccofresco/telltale-explorer) war der Ausgangspunkt, um die Szenen der Season-3-Retro-Engine zu entschlüsseln. Dub Police nutzt [Speex](https://speex.org), [LAME](https://lame.sourceforge.io) über [lameenc](https://github.com/chrisstaite/lameenc), [NumPy](https://numpy.org), [7-Zip](https://www.7-zip.org) und [pywebview](https://pywebview.flowrl.com), dazu die Schriften Bangers und Special Elite. Die Lizenzen liegen in [licenses/](licenses).
 
 ## Lizenz
 

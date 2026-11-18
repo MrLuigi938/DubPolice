@@ -33,15 +33,54 @@ GERMAN = [
 ]
 
 
-def text_shapes(text):
-    """The shapes of a German line in spoken order, one entry per sound; None between words."""
+# French spelling to shapes, longest spellings first. Silent endings are dropped by french_word().
+FRENCH = [
+    ("eaux", ["o"]), ("eau", ["o"]), ("ain", ["ee"]), ("ein", ["ee"]), ("oin", ["u", "ee"]), ("ill", ["i"]),
+    ("au", ["o"]), ("ou", ["u"]), ("où", ["u"]), ("oi", ["u", "aa"]), ("ai", ["ee"]), ("ei", ["ee"]),
+    ("eu", ["o"]), ("œu", ["o"]), ("œ", ["o"]), ("an", ["aa"]), ("am", ["aa"]), ("en", ["aa"]), ("em", ["aa"]),
+    ("on", ["o"]), ("om", ["o"]), ("in", ["ee"]), ("im", ["ee"]), ("un", ["ee"]), ("er", ["ee"]), ("ez", ["ee"]),
+    ("gn", ["nn"]), ("ch", ["sh"]), ("ph", ["fv"]), ("qu", ["nn"]), ("gu", ["nn"]), ("ge", ["sh", "ee"]), ("gi", ["sh", "i"]),
+    ("ce", ["th", "ee"]), ("ci", ["th", "i"]), ("th", ["th"]),
+    ("a", ["aa"]), ("à", ["aa"]), ("â", ["aa"]), ("e", ["ee"]), ("é", ["ee"]), ("è", ["ee"]), ("ê", ["ee"]), ("ë", ["ee"]),
+    ("i", ["i"]), ("î", ["i"]), ("ï", ["i"]), ("y", ["i"]), ("o", ["o"]), ("ô", ["o"]), ("u", ["u"]), ("û", ["u"]), ("ù", ["u"]), ("ü", ["u"]),
+    ("b", ["mm"]), ("p", ["mm"]), ("m", ["mm"]), ("f", ["fv"]), ("v", ["fv"]), ("w", ["u"]), ("l", ["ll"]),
+    ("j", ["sh"]), ("g", ["nn"]), ("ç", ["th"]), ("c", ["nn"]), ("k", ["nn"]), ("q", ["nn"]), ("r", ["nn"]), ("n", ["nn"]),
+    ("d", ["th"]), ("t", ["th"]), ("s", ["th"]), ("z", ["th"]), ("x", ["nn", "th"]), ("h", []),
+]
+
+
+def german_word(word):
+    """Doubled letters are one sound."""
+    return re.sub(r"(.)\1", r"\1", word.replace("ß", "\0")).replace("\0", "ß")
+
+
+def french_word(word):
+    """What French does not say: the elided part before an apostrophe is kept, silent end letters go."""
+    if len(word) > 3 and word.endswith("es"):
+        word = word[:-2]
+    if len(word) > 2:
+        word = re.sub(r"[stxdp]$", "", word)
+    if len(word) > 2 and word.endswith("e"):
+        word = word[:-1]
+    return re.sub(r"(.)\1", r"\1", word)
+
+
+LANGUAGES = {
+    "german": (GERMAN, r"[a-zäöüß]+", german_word),
+    "french": (FRENCH, r"[a-zàâäçéèêëîïôöùûüÿœæ]+", french_word),
+}
+
+
+def text_shapes(text, language="german"):
+    """The shapes of a line in spoken order, one entry per sound; None between words."""
+    rules, letters, fold = LANGUAGES[language]
     text = re.sub(r"\{[^}]*\}|\[[^\]]*\]|\*[^*]*\*", " ", text).lower()
     out = []
-    for word in re.findall(r"[a-zäöüß]+", text):
-        word = re.sub(r"(.)\1", r"\1", word.replace("ß", "\0")).replace("\0", "ß")
+    for word in re.findall(letters, text):
+        word = fold(word)
         i = 0
         while i < len(word):
-            for spelling, shapes in GERMAN:
+            for spelling, shapes in rules:
                 if word.startswith(spelling, i):
                     out += shapes
                     i += len(spelling)
@@ -142,7 +181,96 @@ def rebuild(template, keys, length):
     return bytes(out)
 
 
-def german_lips(template, text, level, length):
+def dub_lips(template, text, level, length, language="german"):
     """`level` comes from loudness(); the MP3 starts about one frame (25 ms) late, so the shapes do too."""
-    keys = [(frame + 1, shape, value) for frame, shape, value in thin(schedule(text_shapes(text), level))]
+    keys = [(frame + 1, shape, value) for frame, shape, value in thin(schedule(text_shapes(text, language), level))]
     return rebuild(template, keys, length)
+
+
+# Gadgets such as the Moviefone, the synth or Sinistar have no mouth shapes, only a switch that is on while they talk:
+# a block of <size><count> and 10-byte records  time:f32  '1'  01 00 00 00  value:'1'|'0'.
+TOGGLE = 10
+
+
+def toggle_block(d):
+    """(offset of first record, record count) of the talk switch, or None."""
+    from anm_patch import length_offset
+    for i in range(length_offset(d) + 4, len(d) - 8):
+        size, count = struct.unpack_from("<II", d, i)
+        if count and size == 8 + count * TOGGLE and i + size <= len(d):
+            if all(d[i + 8 + k * TOGGLE + 4:i + 8 + k * TOGGLE + 9] == b"1\1\0\0\0" for k in range(count)):
+                return i + 8, count
+    return None
+
+
+def talking(level):
+    """On while the voice is loud, as frames; runs shorter than two frames are folded into their neighbours."""
+    on = list(level > 0.12)
+    for want in (False, True):
+        i = 0
+        while i < len(on):
+            j = i
+            while j < len(on) and on[j] == on[i]:
+                j += 1
+            if on[i] == want and j - i < 2 and 0 < i and j < len(on):
+                on[i:j] = [not want] * (j - i)
+            i = j
+    return on
+
+
+def toggle_lips(template, level, length):
+    """The talk switch of a gadget, set from the loudness of the dubbed line. None if the file has no switch."""
+    from anm_patch import length_offset
+    found = toggle_block(template)
+    if not found:
+        return None
+    start, count = found
+    # The MP3 starts about one frame late, so the switch does too.
+    on = [False] + talking(level)
+    keys, last = [], None
+    for frame, state in enumerate(on):
+        if frame / FPS >= length:
+            break
+        if state != last:
+            keys.append((frame / FPS, state))
+            last = state
+    keys.append((length, False))
+    body = b"".join(struct.pack("<f", t) + b"1\1\0\0\0" + (b"1" if s else b"0") for t, s in keys)
+    grow = len(body) - count * TOGGLE
+    out = bytearray(template[:start - 8]) + struct.pack("<II", 8 + len(body), len(keys)) + body + template[start + count * TOGGLE:]
+    offset = length_offset(template)
+    struct.pack_into("<f", out, offset, length)
+    struct.pack_into("<I", out, 4, struct.unpack_from("<I", template, 4)[0] + grow)
+    old = int.from_bytes(template[offset + 9:offset + 12], "little")
+    out[offset + 9:offset + 12] = (old + grow).to_bytes(3, "little")
+    return bytes(out)
+
+
+def borrow_lips(template, pool, length):
+    """Bone lip files (the Maimtron, the bugs, Sal) cannot be rebuilt: take the one of the same character whose length
+    fits the dubbed line best, so the mouth moves as long as the voice. `pool` is [(length, data)] of that character."""
+    from anm_patch import length_offset
+    offset = length_offset(template)
+    types = struct.unpack_from("<I", template, 16)[0]
+    head = template[16:20 + 12 * types]
+    if 0 <= struct.unpack_from("<f", template, offset)[0] - length <= 0.4:
+        return template
+    own = struct.unpack_from("<f", template, offset)[0]
+    if own <= 0:
+        return None  # an empty file: this line moves no mouth
+    same = [(l, d) for l, d in pool if d[16:20 + 12 * types] == head]
+    fits = [(l - length, d) for l, d in same if 0 <= l - length <= 0.4]
+    if fits:
+        donor = min(fits, key=lambda f: f[0])[1]
+    else:
+        # Nothing long enough: the longest shorter one, if it comes closer than the line's own.
+        shorter = [(l, d) for l, d in same if own < l < length]
+        if not shorter:
+            return None
+        donor = max(shorter, key=lambda f: f[0])[1]
+    if donor == template:
+        return template
+    out = bytearray(donor)
+    # Keep this line's own animation name.
+    out[length_offset(donor) - 8:length_offset(donor)] = template[offset - 8:offset]
+    return bytes(out)

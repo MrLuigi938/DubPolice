@@ -95,6 +95,29 @@ def installed_episodes(game):
     return {e: info.get("language", "german") for e, info in episodes.items()}
 
 
+def retro_state(game, season):
+    """(retro episodes can be dubbed here, {episode: language} of those that are)."""
+    if season not in (1, 2, 3) or not is_game(game, season):
+        return False, {}
+    first = GAMES[season]["first"]
+    if season == 1:
+        # Steam's original episodes come dubbed already, next to an English archive the game prefers (see retro1).
+        data = os.path.join(game, f"ep{first}", "Pack", "data")
+        english = os.path.join(data, f"SamMax{first}_english.ttarch")
+        present = (os.path.isfile(english) or os.path.isfile(english + ".DubPolice")) and any(
+            os.path.isfile(os.path.join(data, f"SamMax{first}_{language}.ttarch")) for language in ("german", "french"))
+    elif season == 2:
+        present = os.path.isdir(os.path.join(game, f"ep{first}", "Pack", f"SamMax{first}_english"))
+    else:
+        present = os.path.isfile(os.path.join(game, f"ep{first}", "Pack", f"1_SamMax{first}_pc_data.ttarch"))
+    try:
+        with open(os.path.join(game, MANIFEST), encoding="utf-8") as f:
+            dubbed = json.load(f).get("retro", {})
+    except (OSError, ValueError):
+        dubbed = {}
+    return present, dubbed
+
+
 class Backend:
     """Methods the page calls. Names starting with an underscore stay hidden from it."""
 
@@ -122,17 +145,25 @@ class Backend:
 
     def check(self, season, game, source):
         ok = is_game(game, season)
-        return {"game_ok": ok, "source_ok": bool(source) and os.path.isdir(source), "installed": installed_episodes(game) if ok else {}}
+        present, dubbed = retro_state(game, season)
+        return {"game_ok": ok, "source_ok": bool(source) and os.path.isdir(source), "installed": installed_episodes(game) if ok else {},
+                "retro_available": present, "retro": dubbed}
 
     def pick_folder(self, current):
         start = current if current and os.path.isdir(current) else ""
         result = self._window.create_file_dialog(webview.FileDialog.FOLDER, directory=start)
         return os.path.normpath(result[0]) if result else ""
 
-    def install(self, game, source, episodes, deess=True, language="german"):
+    def install(self, game, source, episodes, deess=True, language="german", music=True):
         if not episodes:
             return "Bitte mindestens eine Episode auswählen."
-        return self._start(["--game", game, "--source", source, "--language", language, "--episodes", *episodes, *([] if deess else ["--no-deess"])])
+        return self._start(["--game", game, "--source", source, "--language", language, "--episodes", *episodes, *([] if deess else ["--no-deess"]), *([] if music else ["--music-continuous"])])
+
+    def retro(self, game, source, on, language="german", music=True):
+        """Dub the retro episodes, or make them English again."""
+        if on:
+            return self._start(["--game", game, "--retro", "on", "--source", source, "--language", language, *([] if music else ["--music-continuous"])])
+        return self._start(["--game", game, "--retro", "off"])
 
     def set_language(self, language):
         self._window.set_title(WINDOW_TITLES[language])

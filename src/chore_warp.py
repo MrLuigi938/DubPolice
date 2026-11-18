@@ -14,7 +14,46 @@ EDGE = 0.02  # fade keys sit just before a line's end and must move with it
 KEY_SIZES = range(13, 61)
 
 
+def retro_body(d):
+    """Where a retro chore's own data starts, or None for a remaster chore.
+
+    The retro release names its files in plain text instead of by hash. Most of its chores name their types in plain
+    text too; those of episode 205 list them by hash (12 bytes each) like the old release, and so do those of the
+    Season 3 retro release, after the magic word ERTM."""
+    if len(d) < 24:
+        return None
+    if d[:4] == b"ERTM":  # Season 3: the same, after a magic word
+        count = struct.unpack_from("<I", d, 4)[0]
+        body = 8 + 12 * count
+        if count < 200 and body + 8 <= len(d):
+            block, ln = struct.unpack_from("<II", d, body)
+            if block == ln + 8 and d[body + 8 + ln - 6:body + 8 + ln].lower() == b".chore":
+                return body
+        return None
+    if d[8:19] == b"class Chore":
+        body = 4
+        for _ in range(struct.unpack_from("<I", d, 0)[0]):
+            body += 8 + struct.unpack_from("<I", d, body)[0]
+        return body
+    count = struct.unpack_from("<I", d, 0)[0]
+    body = 4 + 12 * count
+    if count < 200 and body + 8 <= len(d):
+        block, ln = struct.unpack_from("<II", d, body)
+        if block == ln + 8 and d[body + 8 + ln - 6:body + 8 + ln].lower() == b".chore":
+            return body
+    return None
+
+
+def is_retro(d):
+    return retro_body(d) is not None
+
+
 def chore_info(d):
+    body = retro_body(d)
+    if body is not None:
+        name_len = struct.unpack_from("<I", d, body + 4)[0]
+        length_at = body + 8 + name_len + 1
+        return body, length_at, struct.unpack_from("<f", d, length_at)[0]
     types = struct.unpack_from("<I", d, 16)[0]
     body = 20 + 12 * types
     name_len = struct.unpack_from("<I", d, body + 4)[0]
