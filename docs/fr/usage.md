@@ -10,7 +10,7 @@ Dub Police lit les voix dans votre propre copie de l'ancien jeu, dans la langue 
 | **2** Beyond Time and Space (2009) | Le dossier installé ou le disque | Le dossier installé ou le disque |
 | **3** The Devil's Playhouse (2010) | pas de version française | Le dossier installé |
 
-Sélectionnez le dossier principal de l'ancien jeu. Dub Police y cherche lui-même les bons fichiers. Le disque de la saison 2 contient déjà les deux langues. Vous pouvez monter une image ISO et sélectionner son lecteur.
+Sélectionnez le dossier principal de l'ancien jeu. Dub Police y cherche lui-même les bons fichiers, y compris dans des sous-dossiers comme `Pack\localizedrench`. Le disque de la saison 2 contient déjà les deux langues. Vous pouvez monter une image ISO et sélectionner son lecteur.
 
 **Saison 1 sans disque :** pour son mode rétro, Steam installe les anciens épisodes dans le dossier du remaster (`ep101` à `ep106`), dans la langue choisie pour le jeu dans Steam. Dub Police les trouve tout seul et remplit le champ. Ils sont identiques, octet pour octet, à ceux des anciens disques. Les saisons 2 et 3 ne fournissent que les épisodes rétro anglais.
 
@@ -79,7 +79,7 @@ Chaque épisode n'a qu'une langue à la fois. Si vous installez un épisode dans
 | « kein unterstützter Remaster-Ordner » | Sélectionnez le dossier principal du remaster, celui qui contient `SamMax100.exe`, `SamMax200.exe` ou `SamMax300.exe`. |
 | « nicht vollständig gefunden » | Il manque des fichiers pour cette langue et ces épisodes dans le dossier choisi. Vérifiez que la version est bien dans cette langue. |
 | Le bouton d'installation reste gris | Vérifiez les deux chemins et choisissez au moins un épisode. |
-| La fenêtre ne s'ouvre pas | Installez le [runtime WebView2](https://developer.microsoft.com/microsoft-edge/webview2/) de Microsoft. |
+| La fenêtre ne s'ouvre pas | Installez le [runtime WebView2](https://developer.microsoft.com/microsoft-edge/webview2/) de Microsoft. Si cela ne suffit pas, Windows bloque peut-être des fichiers téléchargés comme `Python.Runtime.dll` : clic droit sur `DubPolice.zip`, **Propriétés**, cochez **Débloquer**, puis décompressez-le à nouveau. |
 | Windows affiche un avertissement | Le programme n'est pas signé, Windows peut donc vous avertir. |
 
 La fenêtre est en français, mais les messages de la conversion elle-même restent en allemand, y compris les détails d'erreur.

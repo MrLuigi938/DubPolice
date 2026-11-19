@@ -10,7 +10,7 @@ Dub Police liest die Stimmen aus deiner eigenen Kopie des alten Spiels, in der g
 | **2** Beyond Time and Space (2009) | Der installierte Ordner oder die Disc | Der installierte Ordner oder die Disc |
 | **3** The Devil's Playhouse (2010) | Der installierte Ordner | keine französische Fassung vorhanden |
 
-Wähle den Hauptordner des alten Spiels. Dub Police sucht darin selbst nach den richtigen Dateien. Die Disc von Season 2 enthält bereits beide Sprachen. Eine ISO kannst du einbinden und ihr Laufwerk auswählen.
+Wähle den Hauptordner des alten Spiels. Dub Police sucht darin selbst nach den richtigen Dateien, auch in Unterordnern wie `Pack\localized\german`. Die Disc von Season 2 enthält bereits beide Sprachen. Eine ISO kannst du einbinden und ihr Laufwerk auswählen.
 
 **Season 1 ohne Disc:** Für den Retro-Modus installiert Steam die alten Episoden im Ordner des Remasters (`ep101` bis `ep106`), in der Sprache, die in Steam für das Spiel eingestellt ist. Dub Police findet sie selbst und füllt das Feld aus. Sie sind Byte für Byte dieselben wie auf den alten Discs. Season 2 und 3 bringen nur die englischen Retro-Episoden mit.
 
@@ -82,5 +82,5 @@ Jede Episode hat immer nur eine Sprache. Installierst du eine Episode in der and
 | „kein unterstützter Remaster-Ordner“ | Den Hauptordner des Remasters wählen, also den mit `SamMax100.exe`, `SamMax200.exe` oder `SamMax300.exe`. |
 | „nicht vollständig gefunden“ | Im gewählten Ordner fehlen Dateien für diese Sprache und diese Episoden. Prüfe, ob die Version wirklich in dieser Sprache vorliegt. |
 | Der Installieren-Knopf bleibt grau | Beide Pfade prüfen und mindestens eine Episode wählen. |
-| Das Fenster öffnet sich nicht | Die [WebView2-Runtime](https://developer.microsoft.com/microsoft-edge/webview2/) von Microsoft installieren. |
+| Das Fenster öffnet sich nicht | Die [WebView2-Runtime](https://developer.microsoft.com/microsoft-edge/webview2/) von Microsoft installieren. Hilft das nicht, blockiert Windows vielleicht Dateien aus dem Download wie `Python.Runtime.dll`: Rechtsklick auf `DubPolice.zip`, **Eigenschaften**, **Zulassen** anhaken, dann neu entpacken. |
 | Windows warnt vor der Datei | Das Programm ist nicht signiert, deshalb kann Windows warnen. |

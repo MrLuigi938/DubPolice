@@ -260,7 +260,9 @@ def run():
         ctypes.windll.user32.MessageBoxW(
             None,
             f"Das Fenster konnte nicht geöffnet werden. Vermutlich fehlt die WebView2-Runtime von Microsoft:\n"
-            f"{WEBVIEW2_URL}\n\nFehler: {err}",
+            f"{WEBVIEW2_URL}\n\n"
+            f"Oder Windows blockiert Dateien aus dem Download (etwa Python.Runtime.dll): Rechtsklick auf DubPolice.zip, "
+            f"Eigenschaften, „Zulassen“ anhaken, dann neu entpacken.\n\nFehler: {err}",
             "Dub Police",
             0x10,
         )

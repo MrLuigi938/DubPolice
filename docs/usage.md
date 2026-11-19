@@ -10,7 +10,7 @@ Dub Police reads the voices from your own copy of the old game, in the language 
 | **2** Beyond Time and Space (2009) | The installed folder or the disc | The installed folder or the disc |
 | **3** The Devil's Playhouse (2010) | The installed folder | no French version exists |
 
-Select the main folder of the old game. Dub Police searches it for the right files, so you don't have to pick them one by one. The Season 2 disc already contains both languages. Mount an ISO and select its drive.
+Select the main folder of the old game. Dub Police searches it for the right files, so you don't have to pick them one by one, including subfolders such as `Pack\localized\german`. The Season 2 disc already contains both languages. Mount an ISO and select its drive.
 
 **Season 1 without a disc:** for its retro mode, Steam installs the old episodes in the remaster's folder (`ep101` to `ep106`), in the language set for the game in Steam. Dub Police finds them by itself and fills in the field. They are byte for byte the same as on the old discs. Seasons 2 and 3 only come with the English retro episodes.
 
@@ -82,7 +82,7 @@ Each episode holds one language at a time. Install an episode in the other langu
 | "kein unterstützter Remaster-Ordner" | Select the main folder of the remaster, the one with `SamMax100.exe`, `SamMax200.exe` or `SamMax300.exe`. |
 | "nicht vollständig gefunden" | The selected folder doesn't hold all the files for this language and these episodes. Check that the version really is in that language. |
 | The install button stays grey | Check both paths and select at least one episode. |
-| The window does not open | Install the [WebView2 Runtime](https://developer.microsoft.com/microsoft-edge/webview2/) from Microsoft. |
+| The window does not open | Install the [WebView2 Runtime](https://developer.microsoft.com/microsoft-edge/webview2/) from Microsoft. If that does not help, Windows may be blocking downloaded files such as `Python.Runtime.dll`: right-click `DubPolice.zip`, choose **Properties**, tick **Unblock**, then unpack it again. |
 | Windows warns about the file | The program is not signed, so Windows may show a warning. |
 
 Messages from the conversion itself are always in German, including error details.

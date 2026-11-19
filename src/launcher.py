@@ -1,6 +1,21 @@
 """Entry point of DubPolice.exe: opens the window, or does the conversion when called with --engine."""
 import multiprocessing
+import os
 import sys
+
+
+def unblock():
+    """Drop the download mark Windows puts on files unpacked from a downloaded ZIP.
+
+    .NET refuses to load a marked Python.Runtime.dll, and then the window cannot open."""
+    if not getattr(sys, "frozen", False):
+        return
+    for root, _dirs, files in os.walk(sys._MEIPASS):
+        for f in files:
+            try:
+                os.remove(os.path.join(root, f) + ":Zone.Identifier")
+            except OSError:
+                pass
 
 
 def main():
@@ -23,6 +38,7 @@ def main():
             sys.stdout.flush()
             sys.exit(1)
     else:
+        unblock()
         import gui
 
         gui.run()

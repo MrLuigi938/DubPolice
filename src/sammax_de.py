@@ -100,6 +100,8 @@ SEASONS = {
 }
 SPEEX_DLL = os.path.join(BIN, "libspeex-1.dll")
 MANIFEST = "SamMax_GermanDub.json"
+# Folders of an old version that hold another language's copy of an English file.
+OTHER_LANGUAGE_FOLDERS = {"german", "french", "italian", "spanish", "deutsch", "français", "francais", "italiano", "español", "espanol"}
 LEGACY_FILES = ("SM2_pc_GermanVoiceTest_uncompressed.ttarch2", "_resdesc_50_GermanVoiceTest.lua")
 STEP = 0.002
 CLIPPED = 0.25
@@ -154,18 +156,26 @@ def collect_source(season, source, work, episodes, language):
     """Return {episode: {role: path}} from an installed game, a folder, or a disc with installers."""
     wanted = {e: {role: name.format(e=e, lang=language) for role, name in season["files"].items()} for e in episodes}
     found = {e: {} for e in episodes}
+    english_rank = {e: 9 for e in episodes}
 
     def scan(folder):
         for root, _dirs, files in os.walk(folder):
+            parts = {p.lower() for p in os.path.relpath(root, folder).split(os.sep)}
             parent = os.path.basename(root).lower()
             for f in files:
                 low = f.lower()
                 for e, roles in wanted.items():
                     for role, name in roles.items():
-                        if low != name or role in found[e]:
+                        if low != name:
                             continue
-                        # Season 2 ships copies for other languages under the same name.
-                        if role == "voice_en" and not season["same_ids"] and parent != "english":
+                        if role == "voice_en" and not season["same_ids"]:
+                            # Season 2 ships copies for other languages under the same name: the disc keeps the English
+                            # one in an English folder, an installed game in Pack (the dub then sits in localized\german).
+                            rank = 0 if parent == "english" else 1 if not parts & OTHER_LANGUAGE_FOLDERS else 9
+                            if rank >= english_rank[e]:
+                                continue
+                            english_rank[e] = rank
+                        elif role in found[e]:
                             continue
                         found[e][role] = os.path.join(root, f)
 
